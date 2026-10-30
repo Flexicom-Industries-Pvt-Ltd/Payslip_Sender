@@ -554,10 +554,28 @@ export async function getDashboardStats() {
   };
 }
 
+export interface MonthStatusRecord {
+  id?: string;
+  month: string;
+  year: string;
+  status: 'SENT' | 'FAILED';
+  sentAt: Date;
+  errorMessage?: string | null;
+}
+
+export interface ActiveMonthSummary {
+  month: string;
+  year: string;
+  sentCount: number;
+  totalCount: number;
+}
+
 export interface EmployeeWithStatus extends EmployeeRecord {
   payslipStatus: 'SENT' | 'MISSED' | 'FAILED';
   lastSentAt?: Date | null;
   lastError?: string | null;
+  yearlyStatusMap: Record<string, 'SENT' | 'FAILED'>;
+  dispatchHistory: MonthStatusRecord[];
 }
 
 export async function getEmployeesWithMonthlyStatus(options?: {
@@ -576,12 +594,12 @@ export async function getEmployeesWithMonthlyStatus(options?: {
   });
 
   const isNeon = await isNeonPostgresActive();
-  let logsForPeriod: EmailDispatchRecord[] = [];
+  let allLogsForYear: EmailDispatchRecord[] = [];
 
   if (isNeon) {
     try {
-      logsForPeriod = (await prisma.emailDispatchLog.findMany({
-        where: { month, year },
+      allLogsForYear = (await prisma.emailDispatchLog.findMany({
+        where: { year },
         orderBy: { sentAt: 'desc' },
       })) as EmailDispatchRecord[];
     } catch {
@@ -589,14 +607,17 @@ export async function getEmployeesWithMonthlyStatus(options?: {
     }
   }
 
-  if (logsForPeriod.length === 0) {
+  if (allLogsForYear.length === 0) {
     const localLogs = readLocalLogs();
-    logsForPeriod = localLogs.filter(
-      (l) => l.month.toLowerCase() === month.toLowerCase() && l.year === year
-    );
+    allLogsForYear = localLogs.filter((l) => l.year === year);
   }
 
-  // Create lookup maps
+  // Filter logs for the specific selected month
+  const logsForPeriod = allLogsForYear.filter(
+    (l) => l.month.toLowerCase() === month.toLowerCase()
+  );
+
+  // Lookup maps for the primary selected month
   const successMap = new Map<string, EmailDispatchRecord>();
   const failedMap = new Map<string, EmailDispatchRecord>();
 
@@ -609,27 +630,87 @@ export async function getEmployeesWithMonthlyStatus(options?: {
     }
   }
 
+  // Build employee-level yearly map and history across all months in the year
+  const employeeYearlyMaps = new Map<string, Record<string, 'SENT' | 'FAILED'>>();
+  const employeeHistories = new Map<string, MonthStatusRecord[]>();
+
+  for (const log of allLogsForYear) {
+    const key = log.employeeId.toLowerCase();
+
+    // Yearly month map
+    if (!employeeYearlyMaps.has(key)) {
+      employeeYearlyMaps.set(key, {});
+    }
+    const yMap = employeeYearlyMaps.get(key)!;
+    // Don't overwrite SUCCESS with FAILED if there are multiple attempts
+    if (log.status === 'SUCCESS' || !yMap[log.month]) {
+      yMap[log.month] = log.status === 'SUCCESS' ? 'SENT' : 'FAILED';
+    }
+
+    // Full dispatch history
+    if (!employeeHistories.has(key)) {
+      employeeHistories.set(key, []);
+    }
+    employeeHistories.get(key)!.push({
+      id: log.id,
+      month: log.month,
+      year: log.year,
+      status: log.status === 'SUCCESS' ? 'SENT' : 'FAILED',
+      sentAt: log.sentAt,
+      errorMessage: log.errorMessage,
+    });
+  }
+
+  // Calculate active months summary for the period jumper
+  const monthCounts = new Map<string, Set<string>>();
+  for (const log of allLogsForYear) {
+    if (log.status === 'SUCCESS') {
+      if (!monthCounts.has(log.month)) {
+        monthCounts.set(log.month, new Set());
+      }
+      monthCounts.get(log.month)!.add(log.employeeId.toLowerCase());
+    }
+  }
+
+  const activeMonths: ActiveMonthSummary[] = Array.from(monthCounts.entries()).map(
+    ([m, empSet]) => ({
+      month: m,
+      year,
+      sentCount: empSet.size,
+      totalCount: employees.length,
+    })
+  );
+
   let enriched: EmployeeWithStatus[] = employees.map((emp) => {
     const key = emp.employeeId.toLowerCase();
     const successLog = successMap.get(key);
     const failLog = failedMap.get(key);
+
+    const yearlyMap = employeeYearlyMaps.get(key) || {};
+    const history = employeeHistories.get(key) || [];
 
     if (successLog) {
       return {
         ...emp,
         payslipStatus: 'SENT',
         lastSentAt: successLog.sentAt,
+        yearlyStatusMap: yearlyMap,
+        dispatchHistory: history,
       };
     } else if (failLog) {
       return {
         ...emp,
         payslipStatus: 'FAILED',
         lastError: failLog.errorMessage,
+        yearlyStatusMap: yearlyMap,
+        dispatchHistory: history,
       };
     } else {
       return {
         ...emp,
         payslipStatus: 'MISSED',
+        yearlyStatusMap: yearlyMap,
+        dispatchHistory: history,
       };
     }
   });
@@ -652,6 +733,7 @@ export async function getEmployeesWithMonthlyStatus(options?: {
       missedCount,
       failedCount,
     },
+    activeMonths,
     month,
     year,
   };

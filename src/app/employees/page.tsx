@@ -24,8 +24,29 @@ import {
   Clock,
   Calendar,
   Send,
+  History,
+  Table,
+  List,
+  Sparkles,
+  ExternalLink,
 } from 'lucide-react';
 import Link from 'next/link';
+
+interface MonthStatusRecord {
+  id?: string;
+  month: string;
+  year: string;
+  status: 'SENT' | 'FAILED';
+  sentAt: string | Date;
+  errorMessage?: string | null;
+}
+
+interface ActiveMonthSummary {
+  month: string;
+  year: string;
+  sentCount: number;
+  totalCount: number;
+}
 
 interface Employee {
   id: string;
@@ -38,6 +59,8 @@ interface Employee {
   payslipStatus?: 'SENT' | 'MISSED' | 'FAILED';
   lastSentAt?: string | null;
   lastError?: string | null;
+  yearlyStatusMap?: Record<string, 'SENT' | 'FAILED'>;
+  dispatchHistory?: MonthStatusRecord[];
 }
 
 export default function EmployeesPage() {
@@ -56,6 +79,12 @@ export default function EmployeesPage() {
     missedCount: 0,
     failedCount: 0,
   });
+
+  // Multi-Month & Matrix View states
+  const [viewMode, setViewMode] = useState<'list' | 'matrix'>('list');
+  const [activeMonths, setActiveMonths] = useState<ActiveMonthSummary[]>([]);
+  const [historyEmployee, setHistoryEmployee] = useState<Employee | null>(null);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
 
   // Modal states
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -107,12 +136,20 @@ export default function EmployeesPage() {
         if (data.counts) {
           setCounts(data.counts);
         }
+        if (data.activeMonths) {
+          setActiveMonths(data.activeMonths);
+        }
       }
     } catch {
       // ignore
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleOpenHistory = (emp: Employee) => {
+    setHistoryEmployee(emp);
+    setIsHistoryModalOpen(true);
   };
 
   useEffect(() => {
@@ -284,6 +321,34 @@ export default function EmployeesPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
+          {/* View Mode Toggle: List View vs 12-Month Matrix */}
+          <div className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-0.5 text-xs font-semibold">
+            <button
+              type="button"
+              onClick={() => setViewMode('list')}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all cursor-pointer ${
+                viewMode === 'list'
+                  ? 'bg-white text-slate-900 shadow-2xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <List className="w-3.5 h-3.5 text-[#78B338]" />
+              <span>List View</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('matrix')}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all cursor-pointer ${
+                viewMode === 'matrix'
+                  ? 'bg-white text-slate-900 shadow-2xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Table className="w-3.5 h-3.5 text-[#78B338]" />
+              <span>12-Month Matrix</span>
+            </button>
+          </div>
+
           <a
             href="/api/employees/export?template=true"
             download="Sterling_Distillers_Employee_Import_Template.xlsx"
@@ -301,7 +366,7 @@ export default function EmployeesPage() {
               setImportError('');
               setIsImportModalOpen(true);
             }}
-            className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shadow-2xs"
+            className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
           >
             <Upload className="w-3.5 h-3.5 text-slate-500" />
             <span>Import Excel / CSV</span>
@@ -321,7 +386,7 @@ export default function EmployeesPage() {
 
           <button
             onClick={handleOpenAdd}
-            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-[#78B338] rounded-lg hover:bg-[#689F2E] transition-colors shadow-xs"
+            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-[#78B338] rounded-lg hover:bg-[#689F2E] transition-colors shadow-xs cursor-pointer"
           >
             <UserPlus className="w-3.5 h-3.5" />
             <span>Add Employee</span>
@@ -330,98 +395,140 @@ export default function EmployeesPage() {
       </div>
 
       {/* Monthly Payslip Status Tracking Bar */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-700 uppercase tracking-wider">
-            <Calendar className="w-4 h-4 text-[#78B338]" />
-            <span>Delivery Period:</span>
+      <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs space-y-3">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-700 uppercase tracking-wider">
+              <Calendar className="w-4 h-4 text-[#78B338]" />
+              <span>Delivery Period:</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 font-semibold focus:outline-hidden focus:ring-2 focus:ring-[#96D055]"
+              >
+                {MONTHS.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(e.target.value)}
+                className="px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 font-semibold focus:outline-hidden focus:ring-2 focus:ring-[#96D055]"
+              >
+                {['2024', '2025', '2026', '2027'].map((yr) => (
+                  <option key={yr} value={yr}>
+                    {yr}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
-          <div className="flex items-center gap-1.5">
-            <select
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              className="px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 font-semibold focus:outline-hidden focus:ring-2 focus:ring-[#96D055]"
-            >
-              {MONTHS.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </select>
 
-            <select
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(e.target.value)}
-              className="px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 font-semibold focus:outline-hidden focus:ring-2 focus:ring-[#96D055]"
-            >
-              {['2024', '2025', '2026', '2027'].map((yr) => (
-                <option key={yr} value={yr}>
-                  {yr}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* Status Filter Pills */}
-        <div className="flex flex-wrap items-center gap-1.5 text-xs">
-          <button
-            onClick={() => setStatusFilter('all')}
-            className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
-              statusFilter === 'all'
-                ? 'bg-slate-800 text-white shadow-2xs'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
-          >
-            All ({counts.total})
-          </button>
-
-          <button
-            onClick={() => setStatusFilter('sent')}
-            className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
-              statusFilter === 'sent'
-                ? 'bg-emerald-600 text-white shadow-2xs'
-                : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
-            }`}
-          >
-            <Check className="w-3.5 h-3.5" />
-            <span>Sent ({counts.sentCount})</span>
-          </button>
-
-          <button
-            onClick={() => setStatusFilter('missed')}
-            className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
-              statusFilter === 'missed'
-                ? 'bg-amber-600 text-white shadow-2xs'
-                : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200'
-            }`}
-          >
-            <Clock className="w-3.5 h-3.5" />
-            <span>Missed / Not Sent ({counts.missedCount})</span>
-          </button>
-
-          {counts.failedCount > 0 && (
+          {/* Status Filter Pills */}
+          <div className="flex flex-wrap items-center gap-1.5 text-xs">
             <button
-              onClick={() => setStatusFilter('failed')}
-              className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
-                statusFilter === 'failed'
-                  ? 'bg-rose-600 text-white shadow-2xs'
-                  : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200'
+              onClick={() => setStatusFilter('all')}
+              className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
+                statusFilter === 'all'
+                  ? 'bg-slate-800 text-white shadow-2xs'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
-              <AlertCircle className="w-3.5 h-3.5" />
-              <span>Failed ({counts.failedCount})</span>
+              All ({counts.total})
             </button>
-          )}
 
-          <Link
-            href="/payslips"
-            className="ml-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#78B338] hover:bg-[#689F2E] text-white rounded-lg font-semibold shadow-2xs text-xs transition-colors"
-          >
-            <Send className="w-3.5 h-3.5" />
-            <span>Distribute Payslips</span>
-          </Link>
+            <button
+              onClick={() => setStatusFilter('sent')}
+              className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                statusFilter === 'sent'
+                  ? 'bg-emerald-600 text-white shadow-2xs'
+                  : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
+              }`}
+            >
+              <Check className="w-3.5 h-3.5" />
+              <span>Sent ({counts.sentCount})</span>
+            </button>
+
+            <button
+              onClick={() => setStatusFilter('missed')}
+              className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                statusFilter === 'missed'
+                  ? 'bg-amber-600 text-white shadow-2xs'
+                  : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200'
+              }`}
+            >
+              <Clock className="w-3.5 h-3.5" />
+              <span>Missed / Not Sent ({counts.missedCount})</span>
+            </button>
+
+            {counts.failedCount > 0 && (
+              <button
+                onClick={() => setStatusFilter('failed')}
+                className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  statusFilter === 'failed'
+                    ? 'bg-rose-600 text-white shadow-2xs'
+                    : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200'
+                }`}
+              >
+                <AlertCircle className="w-3.5 h-3.5" />
+                <span>Failed ({counts.failedCount})</span>
+              </button>
+            )}
+
+            <Link
+              href="/payslips"
+              className="ml-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#78B338] hover:bg-[#689F2E] text-white rounded-lg font-semibold shadow-2xs text-xs transition-colors"
+            >
+              <Send className="w-3.5 h-3.5" />
+              <span>Distribute Payslips</span>
+            </Link>
+          </div>
         </div>
+
+        {/* Quick Month Jumper (Active Dispatched Months) */}
+        {activeMonths.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 pt-2.5 border-t border-slate-100 text-xs">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1 mr-1">
+              <Sparkles className="w-3 h-3 text-[#78B338]" />
+              <span>Active Dispatched Months ({selectedYear}):</span>
+            </span>
+            {activeMonths.map((am) => {
+              const isSelected = am.month === selectedMonth && am.year === selectedYear;
+
+              return (
+                <button
+                  key={`${am.year}-${am.month}`}
+                  onClick={() => {
+                    setSelectedMonth(am.month);
+                    setSelectedYear(am.year);
+                  }}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    isSelected
+                      ? 'bg-[#78B338] text-white shadow-xs font-bold'
+                      : 'bg-[#F2F8EA] text-[#3F6E15] hover:bg-[#E4F3CE] border border-[#D6EDBC]'
+                  }`}
+                >
+                  <Check className="w-3 h-3" />
+                  <span>{am.month}</span>
+                  <span
+                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                      isSelected
+                        ? 'bg-white/20 text-white'
+                        : 'bg-[#D6EDBC] text-[#2E2A2A]'
+                    }`}
+                  >
+                    {am.sentCount} sent
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Filter and Search Bar */}
@@ -438,7 +545,7 @@ export default function EmployeesPage() {
           {search && (
             <button
               onClick={() => setSearch('')}
-              className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
+              className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -465,122 +572,345 @@ export default function EmployeesPage() {
           <button
             onClick={fetchEmployees}
             title="Reload employee records"
-            className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors"
+            className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
       </div>
 
-      {/* Employees Table */}
-      <div className="bg-white rounded-xl border border-slate-200/80 shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50/80 border-b border-slate-200/80 text-slate-500 font-semibold uppercase tracking-wider">
-              <tr>
-                <th className="py-3 px-4">Employee ID</th>
-                <th className="py-3 px-4">Full Name</th>
-                <th className="py-3 px-4">Email Address</th>
-                <th className="py-3 px-4">Department</th>
-                <th className="py-3 px-4">
-                  Payslip Status ({selectedMonth} {selectedYear})
-                </th>
-                <th className="py-3 px-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {employees.length === 0 ? (
+      {/* ================= VIEW 1: STANDARD LIST VIEW ================= */}
+      {viewMode === 'list' && (
+        <div className="bg-white rounded-xl border border-slate-200/80 shadow-xs overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50/80 border-b border-slate-200/80 text-slate-500 font-semibold uppercase tracking-wider">
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-400">
-                    <Users className="w-8 h-8 mx-auto mb-2 text-slate-300" />
-                    <p className="text-sm font-medium text-slate-600">No employees found</p>
-                    <p className="text-xs text-slate-400 mt-1">
-                      {search || departmentFilter !== 'all' || statusFilter !== 'all'
-                        ? 'Try clearing your search or status filters'
-                        : 'Add employees manually or import from an Excel / CSV spreadsheet.'}
-                    </p>
-                  </td>
+                  <th className="py-3 px-4">Employee ID</th>
+                  <th className="py-3 px-4">Full Name</th>
+                  <th className="py-3 px-4">Email Address</th>
+                  <th className="py-3 px-4">Department</th>
+                  <th className="py-3 px-4">
+                    Payslip Tracking ({selectedMonth} {selectedYear} & Dispatched Months)
+                  </th>
+                  <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
-              ) : (
-                employees.map((emp) => {
-                  return (
-                    <tr key={emp.id} className="hover:bg-slate-50/60 transition-colors">
-                      <td className="py-3.5 px-4 font-mono font-medium text-slate-800">
-                        <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 font-semibold">
-                          {emp.employeeId}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 font-semibold text-slate-900">{emp.name}</td>
-                      <td className="py-3.5 px-4 text-slate-600 font-mono text-[11px]">
-                        {emp.email}
-                      </td>
-                      <td className="py-3.5 px-4">
-                        {emp.department ? (
-                          <span className="inline-flex items-center gap-1 text-slate-700">
-                            <Building className="w-3 h-3 text-slate-400" />
-                            <span>{emp.department}</span>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {employees.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center text-slate-400">
+                      <Users className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                      <p className="text-sm font-medium text-slate-600">No employees found</p>
+                      <p className="text-xs text-slate-400 mt-1">
+                        {search || departmentFilter !== 'all' || statusFilter !== 'all'
+                          ? 'Try clearing your search or status filters'
+                          : 'Add employees manually or import from an Excel / CSV spreadsheet.'}
+                      </p>
+                    </td>
+                  </tr>
+                ) : (
+                  employees.map((emp) => {
+                    return (
+                      <tr key={emp.id} className="hover:bg-slate-50/60 transition-colors">
+                        <td className="py-3.5 px-4 font-mono font-medium text-slate-800">
+                          <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 font-semibold">
+                            {emp.employeeId}
                           </span>
-                        ) : (
-                          <span className="text-slate-400 italic">Unassigned</span>
-                        )}
-                      </td>
-                      <td className="py-3.5 px-4">
-                        {emp.payslipStatus === 'SENT' ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
-                            <Check className="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
-                            <span>Sent</span>
-                            {emp.lastSentAt && (
-                              <span className="text-[10px] text-emerald-600 font-normal">
-                                (
-                                {new Date(emp.lastSentAt).toLocaleDateString([], {
-                                  month: 'short',
-                                  day: 'numeric',
+                        </td>
+                        <td className="py-3.5 px-4 font-semibold text-slate-900">{emp.name}</td>
+                        <td className="py-3.5 px-4 text-slate-600 font-mono text-[11px]">
+                          {emp.email}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          {emp.department ? (
+                            <span className="inline-flex items-center gap-1 text-slate-700">
+                              <Building className="w-3 h-3 text-slate-400" />
+                              <span>{emp.department}</span>
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 italic">Unassigned</span>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <div className="space-y-1.5">
+                            {/* Primary Badge for the selected period */}
+                            <div className="flex flex-wrap items-center gap-2">
+                              {emp.payslipStatus === 'SENT' ? (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
+                                  <Check className="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
+                                  <span>{selectedMonth.slice(0, 3)}: Sent</span>
+                                  {emp.lastSentAt && (
+                                    <span className="text-[10px] text-emerald-600 font-normal">
+                                      (
+                                      {new Date(emp.lastSentAt).toLocaleDateString([], {
+                                        month: 'short',
+                                        day: 'numeric',
+                                      })}
+                                      )
+                                    </span>
+                                  )}
+                                </span>
+                              ) : emp.payslipStatus === 'FAILED' ? (
+                                <span
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200 shadow-2xs"
+                                  title={emp.lastError || 'Delivery failed'}
+                                >
+                                  <AlertCircle className="w-3.5 h-3.5 text-rose-600" />
+                                  <span>{selectedMonth.slice(0, 3)}: Failed</span>
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                                  <Clock className="w-3.5 h-3.5 text-amber-500" />
+                                  <span>{selectedMonth.slice(0, 3)}: Missed</span>
+                                </span>
+                              )}
+
+                              {/* History Modal Trigger Pill */}
+                              <button
+                                type="button"
+                                onClick={() => handleOpenHistory(emp)}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold text-slate-600 bg-slate-100 hover:bg-[#F2F8EA] hover:text-[#3F6E15] hover:border-[#D6EDBC] border border-slate-200 rounded-md transition-all cursor-pointer"
+                                title="View Complete Payslip History"
+                              >
+                                <History className="w-3 h-3 text-[#78B338]" />
+                                <span>History ({emp.dispatchHistory?.length || 0})</span>
+                              </button>
+                            </div>
+
+                            {/* Multi-Month Tracking Strip for other months */}
+                            {emp.yearlyStatusMap && Object.keys(emp.yearlyStatusMap).length > 0 && (
+                              <div className="flex flex-wrap items-center gap-1">
+                                <span className="text-[10px] text-slate-400 font-medium">
+                                  {selectedYear} Activity:
+                                </span>
+                                {Object.entries(emp.yearlyStatusMap).map(([mName, st]) => {
+                                  const isFocused = mName === selectedMonth;
+
+                                  return (
+                                    <button
+                                      key={mName}
+                                      type="button"
+                                      onClick={() => setSelectedMonth(mName)}
+                                      title={`Focus on ${mName} ${selectedYear}`}
+                                      className={`inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[10px] font-semibold transition-all cursor-pointer ${
+                                        st === 'SENT'
+                                          ? isFocused
+                                            ? 'bg-[#78B338] text-white shadow-2xs'
+                                            : 'bg-[#F2F8EA] text-[#3F6E15] border border-[#D6EDBC] hover:bg-[#E4F3CE]'
+                                          : 'bg-rose-50 text-rose-700 border border-rose-200'
+                                      }`}
+                                    >
+                                      <span>{mName.slice(0, 3)}</span>
+                                      <span>{st === 'SENT' ? '✓' : '✗'}</span>
+                                    </button>
+                                  );
                                 })}
-                                )
-                              </span>
+                              </div>
                             )}
-                          </span>
-                        ) : emp.payslipStatus === 'FAILED' ? (
-                          <span
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200 shadow-2xs"
-                            title={emp.lastError || 'Delivery failed'}
-                          >
-                            <AlertCircle className="w-3.5 h-3.5 text-rose-600" />
-                            <span>Delivery Failed</span>
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
-                            <Clock className="w-3.5 h-3.5 text-amber-500" />
-                            <span>Missed / Not Sent</span>
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-3.5 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            onClick={() => handleOpenEdit(emp)}
-                            className="p-1.5 text-slate-500 hover:text-[#78B338] hover:bg-[#F2F8EA] rounded-md transition-colors"
-                            title="Edit Employee"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleOpenDelete(emp)}
-                            className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors"
-                            title="Delete Employee"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenHistory(emp)}
+                              className="p-1.5 text-slate-500 hover:text-[#78B338] hover:bg-[#F2F8EA] rounded-md transition-colors cursor-pointer"
+                              title="View Payslip Delivery Timeline"
+                            >
+                              <History className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEdit(emp)}
+                              className="p-1.5 text-slate-500 hover:text-[#78B338] hover:bg-[#F2F8EA] rounded-md transition-colors cursor-pointer"
+                              title="Edit Employee"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenDelete(emp)}
+                              className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors cursor-pointer"
+                              title="Delete Employee"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* ================= VIEW 2: 12-MONTH MATRIX VIEW ================= */}
+      {viewMode === 'matrix' && (
+        <div className="bg-white rounded-xl border border-slate-200/80 shadow-xs overflow-hidden space-y-2">
+          <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-slate-50/50">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <Table className="w-4 h-4 text-[#78B338]" />
+                <span>Annual 12-Month Payslip Distribution Matrix ({selectedYear})</span>
+              </h3>
+              <p className="text-[11px] text-slate-500">
+                Track payroll delivery coverage month-by-month for each employee across the entire calendar year.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-semibold text-slate-600">Year:</span>
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(e.target.value)}
+                className="px-2.5 py-1 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 font-semibold focus:outline-hidden focus:ring-2 focus:ring-[#96D055]"
+              >
+                {['2024', '2025', '2026', '2027'].map((yr) => (
+                  <option key={yr} value={yr}>
+                    {yr}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead className="bg-slate-50 text-slate-600 font-semibold uppercase tracking-wider border-b border-slate-200">
+                <tr>
+                  <th className="py-3 px-3 sticky left-0 bg-slate-50 z-10 border-r border-slate-200 min-w-[90px]">
+                    Emp ID
+                  </th>
+                  <th className="py-3 px-3 sticky left-[90px] bg-slate-50 z-10 border-r border-slate-200 min-w-[140px]">
+                    Full Name
+                  </th>
+                  <th className="py-3 px-3 border-r border-slate-200 min-w-[110px]">
+                    Department
+                  </th>
+                  {MONTHS.map((m) => (
+                    <th
+                      key={m}
+                      className={`py-3 px-2 text-center min-w-[50px] font-bold ${
+                        m === selectedMonth ? 'bg-[#F2F8EA] text-[#3F6E15]' : ''
+                      }`}
+                    >
+                      {m.slice(0, 3)}
+                    </th>
+                  ))}
+                  <th className="py-3 px-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {employees.length === 0 ? (
+                  <tr>
+                    <td colSpan={16} className="py-12 text-center text-slate-400">
+                      No employees registered yet.
+                    </td>
+                  </tr>
+                ) : (
+                  employees.map((emp) => {
+                    const yMap = emp.yearlyStatusMap || {};
+
+                    return (
+                      <tr key={emp.id} className="hover:bg-slate-50/70 transition-colors">
+                        <td className="py-2.5 px-3 font-mono font-bold text-slate-800 sticky left-0 bg-white hover:bg-slate-50 border-r border-slate-200">
+                          {emp.employeeId}
+                        </td>
+                        <td className="py-2.5 px-3 font-semibold text-slate-900 sticky left-[90px] bg-white hover:bg-slate-50 border-r border-slate-200 truncate max-w-[160px]">
+                          {emp.name}
+                        </td>
+                        <td className="py-2.5 px-3 text-slate-500 border-r border-slate-200 truncate max-w-[120px]">
+                          {emp.department || '—'}
+                        </td>
+                        {MONTHS.map((m) => {
+                          const st = yMap[m];
+                          const isCurrent = m === selectedMonth;
+
+                          return (
+                            <td
+                              key={m}
+                              className={`py-2.5 px-1 text-center border-r border-slate-100 ${
+                                isCurrent ? 'bg-[#F2F8EA]/30' : ''
+                              }`}
+                            >
+                              {st === 'SENT' ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenHistory(emp)}
+                                  title={`${m} ${selectedYear}: Delivered`}
+                                  className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-[#F2F8EA] text-[#3F6E15] border border-[#D6EDBC] hover:scale-110 transition-transform cursor-pointer font-bold text-xs"
+                                >
+                                  ✓
+                                </button>
+                              ) : st === 'FAILED' ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenHistory(emp)}
+                                  title={`${m} ${selectedYear}: Delivery Failed`}
+                                  className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-rose-50 text-rose-700 border border-rose-200 hover:scale-110 transition-transform cursor-pointer font-bold text-xs"
+                                >
+                                  ✗
+                                </button>
+                              ) : (
+                                <span className="text-slate-300 font-mono">—</span>
+                              )}
+                            </td>
+                          );
+                        })}
+                        <td className="py-2.5 px-3 text-right">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenHistory(emp)}
+                            className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-semibold text-slate-600 bg-slate-100 hover:bg-[#F2F8EA] hover:text-[#3F6E15] rounded-md transition-all cursor-pointer"
+                            title="View history"
+                          >
+                            <History className="w-3 h-3 text-[#78B338]" />
+                            <span>Details</span>
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+              {/* Matrix Footer with Monthly Totals */}
+              {employees.length > 0 && (
+                <tfoot className="bg-slate-50 font-semibold border-t-2 border-slate-200 text-[11px]">
+                  <tr>
+                    <td
+                      colSpan={3}
+                      className="py-2.5 px-3 text-slate-700 uppercase tracking-wider sticky left-0 bg-slate-50 border-r border-slate-200"
+                    >
+                      Total Payslips Delivered:
+                    </td>
+                    {MONTHS.map((m) => {
+                      const countSent = employees.filter(
+                        (e) => e.yearlyStatusMap?.[m] === 'SENT'
+                      ).length;
+
+                      return (
+                        <td
+                          key={m}
+                          className="py-2.5 px-1 text-center font-bold text-[#3F6E15] border-r border-slate-200"
+                        >
+                          {countSent > 0 ? countSent : '—'}
+                        </td>
+                      );
+                    })}
+                    <td className="py-2.5 px-3 text-right text-slate-500">
+                      {selectedYear} Summary
+                    </td>
+                  </tr>
+                </tfoot>
+              )}
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Add Employee Modal */}
       <Modal
@@ -926,6 +1256,149 @@ export default function EmployeesPage() {
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* Employee Delivery History Modal */}
+      <Modal
+        isOpen={isHistoryModalOpen}
+        onClose={() => setIsHistoryModalOpen(false)}
+        title={historyEmployee ? `Payslip Delivery History: ${historyEmployee.name}` : 'Employee Delivery History'}
+        description={
+          historyEmployee
+            ? `ID: ${historyEmployee.employeeId} • ${historyEmployee.email} • ${historyEmployee.department || 'General'}`
+            : ''
+        }
+        maxWidth="xl"
+      >
+        {historyEmployee && (
+          <div className="space-y-4">
+            {/* Quick stats for this employee */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider block">
+                  Total Dispatched
+                </span>
+                <span className="text-lg font-bold text-slate-900">
+                  {historyEmployee.dispatchHistory?.length || 0}
+                </span>
+              </div>
+
+              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
+                <span className="text-[10px] text-emerald-700 font-semibold uppercase tracking-wider block">
+                  Delivered (✅)
+                </span>
+                <span className="text-lg font-bold text-emerald-900">
+                  {historyEmployee.dispatchHistory?.filter((h) => h.status === 'SENT').length || 0}
+                </span>
+              </div>
+
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl">
+                <span className="text-[10px] text-rose-700 font-semibold uppercase tracking-wider block">
+                  Delivery Failures
+                </span>
+                <span className="text-lg font-bold text-rose-900">
+                  {historyEmployee.dispatchHistory?.filter((h) => h.status === 'FAILED').length || 0}
+                </span>
+              </div>
+            </div>
+
+            {/* Dispatches Timeline Table */}
+            <div className="border border-slate-200 rounded-xl overflow-hidden">
+              <div className="bg-slate-50 px-4 py-2.5 border-b border-slate-200 flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  Full Dispatch Log Timeline
+                </span>
+                <span className="text-[11px] text-slate-400">
+                  Chronological records in Neon PostgreSQL
+                </span>
+              </div>
+
+              {!historyEmployee.dispatchHistory || historyEmployee.dispatchHistory.length === 0 ? (
+                <div className="p-8 text-center text-slate-400 text-xs">
+                  <Clock className="w-6 h-6 mx-auto mb-1.5 text-slate-300" />
+                  <p className="font-semibold text-slate-600">No payslips have been dispatched yet to this employee.</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    When you send a payslip from the Payslips module, the delivery record will appear here.
+                  </p>
+                </div>
+              ) : (
+                <div className="max-h-64 overflow-y-auto divide-y divide-slate-100 text-xs">
+                  <table className="w-full text-left">
+                    <thead className="bg-slate-50/50 text-slate-500 font-semibold text-[11px] border-b border-slate-100">
+                      <tr>
+                        <th className="py-2 px-3">Salary Period</th>
+                        <th className="py-2 px-3">Status</th>
+                        <th className="py-2 px-3">Sent Timestamp</th>
+                        <th className="py-2 px-3">Target Address</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {historyEmployee.dispatchHistory.map((item, idx) => (
+                        <tr key={item.id || idx} className="hover:bg-slate-50/50">
+                          <td className="py-2.5 px-3 font-semibold text-slate-800">
+                            {item.month} {item.year}
+                          </td>
+                          <td className="py-2.5 px-3">
+                            {item.status === 'SENT' ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <Check className="w-3 h-3 text-emerald-600" />
+                                <span>Delivered</span>
+                              </span>
+                            ) : (
+                              <span
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200"
+                                title={item.errorMessage || 'Failed'}
+                              >
+                                <AlertCircle className="w-3 h-3 text-rose-600" />
+                                <span>Failed</span>
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-3 text-slate-600 font-mono text-[11px]">
+                            {new Date(item.sentAt).toLocaleString([], {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </td>
+                          <td className="py-2.5 px-3 text-slate-500 font-mono text-[11px]">
+                            {historyEmployee.email}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer Actions */}
+            <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+              <span className="text-[11px] text-slate-400">
+                Payslips are delivered individually with Zero Permanent PDF Storage.
+              </span>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsHistoryModalOpen(false)}
+                  className="px-3.5 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                >
+                  Close
+                </button>
+                <Link
+                  href="/payslips"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[#78B338] hover:bg-[#689F2E] rounded-lg shadow-xs transition-colors cursor-pointer"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Send Payslip Now</span>
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
       </Modal>
     </DashboardShell>
   );

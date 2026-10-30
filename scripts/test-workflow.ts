@@ -430,6 +430,39 @@ async function runTestSuite() {
     'Filter employee directory by "Missed" status'
   );
 
+  // Multi-Month dispatch tracking test:
+  // Dispatch November 2026 payslip for EMP001
+  await logEmailDispatch({
+    employeeId: 'EMP001',
+    employeeName: 'Sarah Connor',
+    email: 'sarah.connor@example.com',
+    month: 'November',
+    year: '2026',
+    status: 'SUCCESS',
+  });
+
+  const multiMonthRes = await getEmployeesWithMonthlyStatus({
+    month: 'November',
+    year: '2026',
+  });
+  const emp1MultiStatus = multiMonthRes.employees.find((e) => e.employeeId === 'EMP001');
+
+  assert(
+    emp1MultiStatus?.yearlyStatusMap?.['October'] === 'SENT' &&
+      emp1MultiStatus?.yearlyStatusMap?.['November'] === 'SENT',
+    'Multi-month tracking: Employee yearlyStatusMap tracks both October and November dispatches'
+  );
+
+  assert(
+    (emp1MultiStatus?.dispatchHistory?.length || 0) >= 2,
+    'Employee dispatchHistory accumulates full chronological records across multiple months'
+  );
+
+  assert(
+    multiMonthRes.activeMonths && multiMonthRes.activeMonths.length >= 2,
+    'Active dispatched months summarized for quick period jumper and filtering'
+  );
+
   // Cleanup temporary test employees
   await deleteEmployee(tempE1.id);
   await deleteEmployee(tempE2.id);

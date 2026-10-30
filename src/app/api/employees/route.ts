@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
       success: true,
       employees: data.employees,
       counts: data.counts,
+      activeMonths: data.activeMonths || [],
       month: data.month,
       year: data.year,
     });

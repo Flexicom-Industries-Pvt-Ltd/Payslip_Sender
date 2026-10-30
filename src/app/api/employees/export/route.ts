@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as XLSX from 'xlsx';
 import { getEmployeesWithMonthlyStatus } from '@/lib/db-store';
+import { MONTHS } from '@/lib/email-templates';
 
 export async function GET(request: NextRequest) {
   try {
@@ -145,7 +146,23 @@ export async function GET(request: NextRequest) {
 
       XLSX.utils.book_append_sheet(workbook, rosterSheet, 'Employee_Directory');
 
-      // ----------------- SHEET 2: Export Summary Metadata -----------------
+      // ----------------- SHEET 2: Annual 12-Month Matrix -----------------
+      const matrixRows = employees.map((e) => {
+        const row: Record<string, string> = {
+          'Employee ID': e.employeeId,
+          'Employee Name': e.name,
+          Department: e.department || 'Unassigned',
+        };
+        MONTHS.forEach((m) => {
+          const st = e.yearlyStatusMap?.[m];
+          row[m.slice(0, 3)] = st === 'SENT' ? 'SENT' : st === 'FAILED' ? 'FAILED' : '—';
+        });
+        return row;
+      });
+      const matrixSheet = XLSX.utils.json_to_sheet(matrixRows);
+      XLSX.utils.book_append_sheet(workbook, matrixSheet, `Annual_Matrix_${year}`);
+
+      // ----------------- SHEET 3: Export Summary Metadata -----------------
       const totalEmployees = statusData.counts.total;
       const sentCount = statusData.counts.sentCount;
       const missedCount = statusData.counts.missedCount;
