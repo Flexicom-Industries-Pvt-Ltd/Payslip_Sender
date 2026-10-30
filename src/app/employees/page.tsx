@@ -591,7 +591,7 @@ export default function EmployeesPage() {
                   <th className="py-3 px-4">Email Address</th>
                   <th className="py-3 px-4">Department</th>
                   <th className="py-3 px-4">
-                    Payslip Tracking ({selectedMonth} {selectedYear} & Dispatched Months)
+                    Delivery Status ({selectedMonth} {selectedYear})
                   </th>
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
@@ -633,80 +633,55 @@ export default function EmployeesPage() {
                           )}
                         </td>
                         <td className="py-3.5 px-4">
-                          <div className="space-y-1.5">
-                            {/* Primary Badge for the selected period */}
-                            <div className="flex flex-wrap items-center gap-2">
-                              {emp.payslipStatus === 'SENT' ? (
-                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
-                                  <Check className="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
-                                  <span>{selectedMonth.slice(0, 3)}: Sent</span>
-                                  {emp.lastSentAt && (
-                                    <span className="text-[10px] text-emerald-600 font-normal">
-                                      (
-                                      {new Date(emp.lastSentAt).toLocaleDateString([], {
-                                        month: 'short',
-                                        day: 'numeric',
-                                      })}
-                                      )
-                                    </span>
-                                  )}
-                                </span>
-                              ) : emp.payslipStatus === 'FAILED' ? (
-                                <span
-                                  className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200 shadow-2xs"
-                                  title={emp.lastError || 'Delivery failed'}
-                                >
-                                  <AlertCircle className="w-3.5 h-3.5 text-rose-600" />
-                                  <span>{selectedMonth.slice(0, 3)}: Failed</span>
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
-                                  <Clock className="w-3.5 h-3.5 text-amber-500" />
-                                  <span>{selectedMonth.slice(0, 3)}: Missed</span>
-                                </span>
-                              )}
-
-                              {/* History Modal Trigger Pill */}
+                          <div className="flex items-center gap-2.5">
+                            {emp.payslipStatus === 'SENT' ? (
                               <button
                                 type="button"
                                 onClick={() => handleOpenHistory(emp)}
-                                className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold text-slate-600 bg-slate-100 hover:bg-[#F2F8EA] hover:text-[#3F6E15] hover:border-[#D6EDBC] border border-slate-200 rounded-md transition-all cursor-pointer"
-                                title="View Complete Payslip History"
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#F2F8EA] text-[#3F6E15] border border-[#D6EDBC] hover:bg-[#E4F3CE] transition-all cursor-pointer shadow-2xs"
+                                title="Click to view full delivery history"
                               >
-                                <History className="w-3 h-3 text-[#78B338]" />
-                                <span>History ({emp.dispatchHistory?.length || 0})</span>
+                                <Check className="w-3.5 h-3.5 text-[#78B338] stroke-[3]" />
+                                <span>Sent</span>
+                                {emp.lastSentAt && (
+                                  <span className="text-[10px] text-[#78B338] font-normal">
+                                    (
+                                    {new Date(emp.lastSentAt).toLocaleDateString([], {
+                                      month: 'short',
+                                      day: 'numeric',
+                                    })}
+                                    )
+                                  </span>
+                                )}
                               </button>
-                            </div>
+                            ) : emp.payslipStatus === 'FAILED' ? (
+                              <button
+                                type="button"
+                                onClick={() => handleOpenHistory(emp)}
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition-all cursor-pointer shadow-2xs"
+                                title={emp.lastError || 'Click to view delivery error'}
+                              >
+                                <AlertCircle className="w-3.5 h-3.5 text-rose-600" />
+                                <span>Failed</span>
+                              </button>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                                <Clock className="w-3.5 h-3.5 text-amber-500" />
+                                <span>Missed</span>
+                              </span>
+                            )}
 
-                            {/* Multi-Month Tracking Strip for other months */}
-                            {emp.yearlyStatusMap && Object.keys(emp.yearlyStatusMap).length > 0 && (
-                              <div className="flex flex-wrap items-center gap-1">
-                                <span className="text-[10px] text-slate-400 font-medium">
-                                  {selectedYear} Activity:
-                                </span>
-                                {Object.entries(emp.yearlyStatusMap).map(([mName, st]) => {
-                                  const isFocused = mName === selectedMonth;
-
-                                  return (
-                                    <button
-                                      key={mName}
-                                      type="button"
-                                      onClick={() => setSelectedMonth(mName)}
-                                      title={`Focus on ${mName} ${selectedYear}`}
-                                      className={`inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[10px] font-semibold transition-all cursor-pointer ${
-                                        st === 'SENT'
-                                          ? isFocused
-                                            ? 'bg-[#78B338] text-white shadow-2xs'
-                                            : 'bg-[#F2F8EA] text-[#3F6E15] border border-[#D6EDBC] hover:bg-[#E4F3CE]'
-                                          : 'bg-rose-50 text-rose-700 border border-rose-200'
-                                      }`}
-                                    >
-                                      <span>{mName.slice(0, 3)}</span>
-                                      <span>{st === 'SENT' ? '✓' : '✗'}</span>
-                                    </button>
-                                  );
-                                })}
-                              </div>
+                            {/* Clean subtle history trigger */}
+                            {(emp.dispatchHistory?.length || 0) > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => handleOpenHistory(emp)}
+                                className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-400 hover:text-[#78B338] transition-colors cursor-pointer"
+                                title="View delivery history timeline"
+                              >
+                                <History className="w-3 h-3 text-slate-400" />
+                                <span>{emp.dispatchHistory?.length} sent</span>
+                              </button>
                             )}
                           </div>
                         </td>

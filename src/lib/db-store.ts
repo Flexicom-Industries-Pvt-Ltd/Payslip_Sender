@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import { prisma } from './prisma';
 
 export interface EmployeeRecord {
@@ -24,15 +25,31 @@ export interface EmailDispatchRecord {
   sentAt: Date;
 }
 
-const DATA_DIR = path.join(process.cwd(), '.data');
-const LOCAL_EMPLOYEES_FILE = path.join(DATA_DIR, 'employees.json');
-const LOCAL_LOGS_FILE = path.join(DATA_DIR, 'email-logs.json');
-
-// Ensure local fallback data directory exists
-function ensureDataDir() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+function getSafeDataDir(): string {
+  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.NODE_ENV === 'production') {
+    return path.join(os.tmpdir(), '.data');
   }
+  return path.join(process.cwd(), '.data');
+}
+
+function ensureDataDir(): string {
+  const dir = getSafeDataDir();
+  try {
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+  } catch {
+    // Gracefully handle read-only environments
+  }
+  return dir;
+}
+
+function getLocalEmployeesFile(): string {
+  return path.join(ensureDataDir(), 'employees.json');
+}
+
+function getLocalLogsFile(): string {
+  return path.join(ensureDataDir(), 'email-logs.json');
 }
 
 function getInitialEmployees(): EmployeeRecord[] {
@@ -86,12 +103,12 @@ function getInitialEmployees(): EmployeeRecord[] {
 }
 
 function readLocalEmployees(): EmployeeRecord[] {
-  ensureDataDir();
-  if (!fs.existsSync(LOCAL_EMPLOYEES_FILE)) {
-    return [];
-  }
   try {
-    const raw = fs.readFileSync(LOCAL_EMPLOYEES_FILE, 'utf-8');
+    const file = getLocalEmployeesFile();
+    if (!fs.existsSync(file)) {
+      return [];
+    }
+    const raw = fs.readFileSync(file, 'utf-8');
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) {
       return [];
@@ -107,17 +124,21 @@ function readLocalEmployees(): EmployeeRecord[] {
 }
 
 function writeLocalEmployees(records: EmployeeRecord[]) {
-  ensureDataDir();
-  fs.writeFileSync(LOCAL_EMPLOYEES_FILE, JSON.stringify(records, null, 2), 'utf-8');
+  try {
+    const file = getLocalEmployeesFile();
+    fs.writeFileSync(file, JSON.stringify(records, null, 2), 'utf-8');
+  } catch {
+    // Gracefully ignore local file write restrictions
+  }
 }
 
 function readLocalLogs(): EmailDispatchRecord[] {
-  ensureDataDir();
-  if (!fs.existsSync(LOCAL_LOGS_FILE)) {
-    return [];
-  }
   try {
-    const raw = fs.readFileSync(LOCAL_LOGS_FILE, 'utf-8');
+    const file = getLocalLogsFile();
+    if (!fs.existsSync(file)) {
+      return [];
+    }
+    const raw = fs.readFileSync(file, 'utf-8');
     const parsed = JSON.parse(raw);
     return parsed.map((log: any) => ({
       ...log,
@@ -129,8 +150,12 @@ function readLocalLogs(): EmailDispatchRecord[] {
 }
 
 function writeLocalLogs(records: EmailDispatchRecord[]) {
-  ensureDataDir();
-  fs.writeFileSync(LOCAL_LOGS_FILE, JSON.stringify(records, null, 2), 'utf-8');
+  try {
+    const file = getLocalLogsFile();
+    fs.writeFileSync(file, JSON.stringify(records, null, 2), 'utf-8');
+  } catch {
+    // Gracefully ignore local file write restrictions
+  }
 }
 
 let neonConnectedCache: boolean | null = null;
