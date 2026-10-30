@@ -92,7 +92,7 @@ export default function SettingsPage() {
         host: 'smtppro.zoho.com',
         port: 465,
         secure: true,
-        from: prev.user ? `HR Department <${prev.user}>` : 'HR Department <hr@yourcompany.com>',
+        from: prev.user ? `Sterling Distillers HR <${prev.user}>` : 'Sterling Distillers HR <sales@sterlingdistillers.com>',
       }));
     } else if (preset === 'gmail') {
       setFormData((prev) => ({
@@ -100,7 +100,7 @@ export default function SettingsPage() {
         host: 'smtp.gmail.com',
         port: 587,
         secure: false,
-        from: prev.user ? `HR Payroll <${prev.user}>` : 'HR Payroll <yourname@gmail.com>',
+        from: prev.user ? `Sterling Distillers HR <${prev.user}>` : 'Sterling Distillers HR <sterlingdistillers@gmail.com>',
       }));
     } else if (preset === 'outlook') {
       setFormData((prev) => ({
@@ -108,7 +108,7 @@ export default function SettingsPage() {
         host: 'smtp.office365.com',
         port: 587,
         secure: false,
-        from: prev.user ? `HR Department <${prev.user}>` : 'HR Department <hr@company.com>',
+        from: prev.user ? `Sterling Distillers HR <${prev.user}>` : 'Sterling Distillers HR <hr@sterlingdistillers.com>',
       }));
     }
   };
@@ -398,7 +398,7 @@ export default function SettingsPage() {
               </label>
               <input
                 type="text"
-                placeholder='e.g. HR Department <hr@yourcompany.com>'
+                placeholder='e.g. Sterling Distillers HR <sales@sterlingdistillers.com>'
                 value={formData.from}
                 onChange={(e) => setFormData({ ...formData, from: e.target.value })}
                 className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:bg-white text-slate-900"

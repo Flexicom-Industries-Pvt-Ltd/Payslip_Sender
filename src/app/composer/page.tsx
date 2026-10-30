@@ -227,7 +227,7 @@ export default function EmailComposerPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="w-14 text-slate-400 font-medium">From:</span>
-                  <span className="text-slate-600">HR Department &lt;hr@company.com&gt;</span>
+                  <span className="text-slate-600">Sterling Distillers HR &lt;sales@sterlingdistillers.com&gt;</span>
                 </div>
                 <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
                   <span className="w-14 text-slate-400 font-medium">Subject:</span>

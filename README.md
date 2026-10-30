@@ -1,6 +1,6 @@
-# PayrollDispatch - Employee Payslip Distribution System
+# Sterling Distillers - Employee Payslip Distribution System
 
-A lightweight, production-ready web application for HR to distribute monthly salary slips to employees through email.
+A lightweight, production-ready web application for Sterling Distillers Private Limited HR to distribute monthly salary slips to employees through email.
 
 Built with **Next.js 16 (App Router)**, **TypeScript**, **Neon PostgreSQL**, **Prisma ORM**, **Tailwind CSS**, **Nodemailer (SMTP)**, and **XLSX**.
 

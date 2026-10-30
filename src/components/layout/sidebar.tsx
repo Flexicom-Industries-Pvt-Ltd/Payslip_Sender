@@ -8,7 +8,6 @@ import {
   Send,
   MailCheck,
   Settings,
-  Building2,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -40,17 +39,13 @@ export function Sidebar() {
   return (
     <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col shrink-0 border-r border-slate-800 select-none">
       {/* Brand Header */}
-      <div className="h-16 flex items-center px-6 border-b border-slate-800 gap-3">
-        <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-sm font-bold text-lg">
-          <Building2 className="w-4 h-4" />
-        </div>
-        <div>
-          <span className="font-semibold text-white text-sm tracking-tight block">
-            PayrollDispatch
-          </span>
-          <span className="text-[10px] text-slate-400 block -mt-0.5">
-            HR Salary Distribution
-          </span>
+      <div className="h-20 flex items-center px-4 border-b border-slate-800">
+        <div className="w-full bg-white rounded-lg px-2.5 py-1.5 flex items-center justify-center shadow-xs">
+          <img
+            src="/sterling-logo.jpg"
+            alt="Sterling Distillers Private Limited"
+            className="h-9 w-auto max-w-full object-contain"
+          />
         </div>
       </div>
 

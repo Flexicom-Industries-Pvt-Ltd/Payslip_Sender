@@ -14,7 +14,8 @@ Please find attached your salary slip for {{month}} {{year}}.
 Should you have any queries regarding your salary, please contact the HR department.
 
 Regards,
-Human Resources Department`;
+Human Resources Department
+Sterling Distillers Private Limited`;
 
 export const AVAILABLE_VARIABLES = [
   {

@@ -53,8 +53,8 @@ export function Header() {
   return (
     <header className="h-16 bg-white border-b border-slate-200/80 px-6 flex items-center justify-between z-10 shrink-0">
       <div className="flex items-center gap-4">
-        <h1 className="text-lg font-semibold text-slate-800 tracking-tight hidden sm:block">
-          Employee Payslip Distribution System
+        <h1 className="text-base font-bold text-slate-900 tracking-tight hidden sm:block">
+          Sterling Distillers — Payslip Dispatch Portal
         </h1>
       </div>
 

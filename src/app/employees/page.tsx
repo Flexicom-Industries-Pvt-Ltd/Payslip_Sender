@@ -286,7 +286,7 @@ export default function EmployeesPage() {
         <div className="flex flex-wrap items-center gap-2.5">
           <a
             href="/api/employees/export?template=true"
-            download="PayrollDispatch_Employee_Import_Template.xlsx"
+            download="Sterling_Distillers_Employee_Import_Template.xlsx"
             className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors shadow-2xs"
             title="Download formatted Excel template with instructions and sample rows"
           >
@@ -848,7 +848,7 @@ export default function EmployeesPage() {
             </div>
             <a
               href="/api/employees/export?template=true"
-              download="PayrollDispatch_Employee_Import_Template.xlsx"
+              download="Sterling_Distillers_Employee_Import_Template.xlsx"
               className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-xs transition-colors"
             >
               <Download className="w-3.5 h-3.5" />

@@ -192,8 +192,8 @@ export async function getEmployees(filters?: { search?: string; department?: str
 
   if (isNeon) {
     try {
-      const count = await prisma.employee.count();
-      if (count === 0) {
+      const emp1 = await prisma.employee.findUnique({ where: { employeeId: 'EMP001' } });
+      if (!emp1) {
         const initial = getInitialEmployees();
         await prisma.employee.createMany({
           data: initial.map((e) => ({

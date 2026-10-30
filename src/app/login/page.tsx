@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Building2, Lock, ArrowRight, AlertCircle } from 'lucide-react';
+import { Lock, ArrowRight, AlertCircle } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -45,13 +45,17 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-slate-900 flex flex-col justify-center items-center p-4">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-800 p-8">
-        <div className="flex flex-col items-center text-center mb-8">
-          <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg mb-3">
-            <Building2 className="w-6 h-6" />
+        <div className="flex flex-col items-center text-center mb-6">
+          <div className="mb-4 p-2 bg-slate-50 border border-slate-100 rounded-xl shadow-2xs">
+            <img
+              src="/sterling-logo.jpg"
+              alt="Sterling Distillers Private Limited"
+              className="h-12 w-auto object-contain"
+            />
           </div>
-          <h1 className="text-xl font-bold text-slate-900">HR Payslip Dispatch Portal</h1>
-          <p className="text-xs text-slate-500 mt-1">
-            Secure, in-memory monthly salary slip distribution system
+          <h1 className="text-lg font-bold text-slate-900">Sterling Distillers Private Limited</h1>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Confidential HR Salary Slip Portal
           </p>
         </div>
 

@@ -13,9 +13,14 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'PayrollDispatch - Employee Payslip Distribution System',
+  title: 'Sterling Distillers | Employee Payslip Distribution System',
   description:
-    'Lightweight, production-ready web application for HR to distribute monthly salary slips to employees through email.',
+    'Sterling Distillers Private Limited - Confidential Employee Payslip & Salary Slip Distribution Portal.',
+  icons: {
+    icon: '/sterling-favicon.png',
+    shortcut: '/sterling-favicon.png',
+    apple: '/sterling-favicon.png',
+  },
 };
 
 export default function RootLayout({
