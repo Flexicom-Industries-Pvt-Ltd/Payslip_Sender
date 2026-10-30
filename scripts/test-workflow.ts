@@ -501,6 +501,9 @@ async function runTestSuite() {
   // ----------------- TEST SUITE 7: DYNAMIC IN-APP SMTP CONFIGURATION -----------------
   console.log('\n⚙️ Suite 7: Dynamic In-App SMTP Configuration & Security');
 
+  // Backup existing production SMTP config so tests don't overwrite user credentials
+  const preTestSmtp = await getStoredSMTPConfig();
+
   const savedSmtp = await saveStoredSMTPConfig({
     host: 'smtppro.zoho.com',
     port: 465,
@@ -525,6 +528,18 @@ async function runTestSuite() {
     storedConfig.password === 'super-secret-app-password',
     'Server securely retrieved stored credentials'
   );
+
+  // Restore previous SMTP configuration so database remains clean
+  if (preTestSmtp && preTestSmtp.host && preTestSmtp.user !== 'hr@example-company.com') {
+    await saveStoredSMTPConfig({
+      host: preTestSmtp.host,
+      port: preTestSmtp.port,
+      user: preTestSmtp.user,
+      password: preTestSmtp.password,
+      from: preTestSmtp.from,
+      secure: preTestSmtp.secure,
+    });
+  }
 
   // Summary
   console.log('\n====================================================');
