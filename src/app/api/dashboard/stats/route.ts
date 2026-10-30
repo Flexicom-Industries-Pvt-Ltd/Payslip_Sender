@@ -5,7 +5,7 @@ import { getSMTPConfigStatus } from '@/lib/mailer';
 export async function GET() {
   try {
     const stats = await getDashboardStats();
-    const smtp = getSMTPConfigStatus();
+    const smtp = await getSMTPConfigStatus();
 
     return NextResponse.json({
       success: true,

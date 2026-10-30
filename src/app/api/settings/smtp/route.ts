@@ -3,7 +3,7 @@ import { getSMTPConfigStatus, saveStoredSMTPConfig, verifySMTPConnection } from 
 
 export async function GET() {
   try {
-    const status = getSMTPConfigStatus();
+    const status = await getSMTPConfigStatus();
     return NextResponse.json({ success: true, smtp: status });
   } catch (err: any) {
     return NextResponse.json(
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const updatedStatus = saveStoredSMTPConfig({
+    const updatedStatus = await saveStoredSMTPConfig({
       host,
       port: Number(port) || 587,
       user,

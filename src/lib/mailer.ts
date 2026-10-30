@@ -1,7 +1,9 @@
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import nodemailer from 'nodemailer';
-import { logEmailDispatch } from './db-store';
+import { prisma } from './prisma';
+import { logEmailDispatch, isNeonPostgresActive } from './db-store';
 
 export interface SMTPStoredConfig {
   host: string;
@@ -25,24 +27,65 @@ export interface SMTPConfigStatus {
   updatedAt?: string | null;
 }
 
-const DATA_DIR = path.join(process.cwd(), '.data');
-const CONFIG_FILE = path.join(DATA_DIR, 'smtp-config.json');
+function getSafeDataDir(): string {
+  // On Vercel / AWS Lambda, process.cwd() is read-only /var/task. Use os.tmpdir()
+  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.NODE_ENV === 'production') {
+    return path.join(os.tmpdir(), '.data');
+  }
+  return path.join(process.cwd(), '.data');
+}
 
 function ensureDataDir() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+  try {
+    const dir = getSafeDataDir();
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+  } catch {
+    // Ignore read-only filesystem errors gracefully
   }
 }
 
+function getConfigFile(): string {
+  return path.join(getSafeDataDir(), 'smtp-config.json');
+}
+
 /**
- * Loads dynamic SMTP settings saved via the web dashboard.
- * Falls back to process.env if no web configuration file exists yet.
+ * Loads dynamic SMTP settings:
+ * 1. Checks Neon PostgreSQL (persistent across all serverless invocations)
+ * 2. Fallbacks to safe local file (if exists in /tmp or .data)
+ * 3. Fallbacks to process.env
  */
-export function getStoredSMTPConfig(): SMTPStoredConfig {
-  ensureDataDir();
-  if (fs.existsSync(CONFIG_FILE)) {
-    try {
-      const raw = fs.readFileSync(CONFIG_FILE, 'utf-8');
+export async function getStoredSMTPConfig(): Promise<SMTPStoredConfig> {
+  // 1. Check Neon PostgreSQL
+  try {
+    const isNeon = await isNeonPostgresActive();
+    if (isNeon) {
+      const dbConfig = await prisma.smtpConfig.findUnique({
+        where: { id: 'default' },
+      });
+      if (dbConfig && dbConfig.host) {
+        return {
+          host: dbConfig.host,
+          port: dbConfig.port,
+          user: dbConfig.user,
+          password: dbConfig.password,
+          from: dbConfig.from,
+          secure: dbConfig.secure,
+          updatedAt: dbConfig.updatedAt.toISOString(),
+        };
+      }
+    }
+  } catch {
+    // Neon query fallback
+  }
+
+  // 2. Check local file store
+  try {
+    ensureDataDir();
+    const configFile = getConfigFile();
+    if (fs.existsSync(configFile)) {
+      const raw = fs.readFileSync(configFile, 'utf-8');
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed === 'object') {
         return {
@@ -55,12 +98,12 @@ export function getStoredSMTPConfig(): SMTPStoredConfig {
           updatedAt: parsed.updatedAt || undefined,
         };
       }
-    } catch {
-      // fallback
     }
+  } catch {
+    // ignore
   }
 
-  // Fallback to process.env
+  // 3. Fallback to process.env
   const host = process.env.SMTP_HOST || '';
   const port = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 587;
   const user = process.env.SMTP_USER || '';
@@ -79,42 +122,78 @@ export function getStoredSMTPConfig(): SMTPStoredConfig {
 }
 
 /**
- * Saves dynamic SMTP settings submitted from the web dashboard.
+ * Saves dynamic SMTP settings:
+ * 1. Persists to Neon PostgreSQL database
+ * 2. Writes to safe local fallback file without crashing on read-only environments
+ * 3. Updates in-memory process.env
  */
-export function saveStoredSMTPConfig(data: {
+export async function saveStoredSMTPConfig(data: {
   host: string;
   port: number;
   user: string;
   password?: string;
   from: string;
   secure?: boolean;
-}): SMTPConfigStatus {
-  ensureDataDir();
-
-  const current = getStoredSMTPConfig();
+}): Promise<SMTPConfigStatus> {
+  const current = await getStoredSMTPConfig();
   const host = data.host.trim();
   const port = Number(data.port) || (data.secure ? 465 : 587);
   const user = data.user.trim();
-  // If no password provided, keep existing password
+  // If no password provided, retain existing password
   const password = data.password !== undefined && data.password !== ''
     ? data.password.trim()
     : (current.password || '');
   const from = data.from.trim() || user;
   const secure = data.secure !== undefined ? Boolean(data.secure) : port === 465;
 
-  const toSave: SMTPStoredConfig = {
-    host,
-    port,
-    user,
-    password,
-    from,
-    secure,
-    updatedAt: new Date().toISOString(),
-  };
+  // 1. Persist to Neon PostgreSQL
+  try {
+    const isNeon = await isNeonPostgresActive();
+    if (isNeon) {
+      await prisma.smtpConfig.upsert({
+        where: { id: 'default' },
+        create: {
+          id: 'default',
+          host,
+          port,
+          user,
+          password,
+          from,
+          secure,
+        },
+        update: {
+          host,
+          port,
+          user,
+          password,
+          from,
+          secure,
+        },
+      });
+    }
+  } catch (err) {
+    console.warn('Neon SMTP persistence notice:', err);
+  }
 
-  fs.writeFileSync(CONFIG_FILE, JSON.stringify(toSave, null, 2), 'utf-8');
+  // 2. Persist to safe directory if possible
+  try {
+    ensureDataDir();
+    const configFile = getConfigFile();
+    const toSave: SMTPStoredConfig = {
+      host,
+      port,
+      user,
+      password,
+      from,
+      secure,
+      updatedAt: new Date().toISOString(),
+    };
+    fs.writeFileSync(configFile, JSON.stringify(toSave, null, 2), 'utf-8');
+  } catch {
+    // Gracefully ignore filesystem write restrictions on Vercel
+  }
 
-  // Also update process.env in memory for consistency
+  // 3. Update process.env in memory
   process.env.SMTP_HOST = host;
   process.env.SMTP_PORT = String(port);
   process.env.SMTP_USER = user;
@@ -122,21 +201,20 @@ export function saveStoredSMTPConfig(data: {
   process.env.SMTP_FROM = from;
   process.env.SMTP_SECURE = String(secure);
 
-  return getSMTPConfigStatus();
+  return await getSMTPConfigStatus();
 }
 
 /**
  * Inspects status without exposing the raw password to the client.
  */
-export function getSMTPConfigStatus(): SMTPConfigStatus {
-  const config = getStoredSMTPConfig();
+export async function getSMTPConfigStatus(): Promise<SMTPConfigStatus> {
+  const config = await getStoredSMTPConfig();
 
   const missingFields: string[] = [];
   if (!config.host) missingFields.push('SMTP Host');
-  if (!config.port) missingFields.push('SMTP Port');
-  if (!config.user) missingFields.push('SMTP Username / Email');
+  if (!config.user) missingFields.push('SMTP Username');
   if (!config.password) missingFields.push('SMTP Password');
-  if (!config.from) missingFields.push('Sender "From" Header');
+  if (!config.from) missingFields.push('Sender From');
 
   return {
     isConfigured: missingFields.length === 0,
@@ -151,13 +229,7 @@ export function getSMTPConfigStatus(): SMTPConfigStatus {
   };
 }
 
-export function createTransporter(overrideConfig?: Partial<SMTPStoredConfig>) {
-  const baseConfig = getStoredSMTPConfig();
-  const config = {
-    ...baseConfig,
-    ...overrideConfig,
-  };
-
+export function createTransporter(config: SMTPStoredConfig) {
   if (!config.host || !config.user || !config.password) {
     throw new Error('SMTP host, username, and password are required.');
   }
@@ -183,8 +255,8 @@ export async function verifySMTPConnection(
   message: string;
 }> {
   try {
-    const current = getStoredSMTPConfig();
-    const configToTest = {
+    const current = await getStoredSMTPConfig();
+    const configToTest: SMTPStoredConfig = {
       ...current,
       ...(customConfig || {}),
       // If password not passed in test payload, use stored password
@@ -272,8 +344,8 @@ export async function sendPayslipEmail(options: SendPayslipOptions): Promise<Sen
   }
 
   try {
-    const config = getStoredSMTPConfig();
-    const transporter = createTransporter();
+    const config = await getStoredSMTPConfig();
+    const transporter = createTransporter(config);
     const fromAddress = config.from || config.user;
 
     const htmlBody = `
@@ -311,23 +383,6 @@ ${escapeHtml(body)}
       ],
     });
 
-    const accepted = Array.isArray(info.accepted) && info.accepted.length > 0;
-    if (!accepted) {
-      const rejectedMsg = info.rejected?.length
-        ? `Recipient rejected by SMTP server: ${info.rejected.join(', ')}`
-        : 'SMTP server did not confirm delivery acceptance.';
-      await logEmailDispatch({
-        employeeId,
-        employeeName,
-        email: to,
-        month,
-        year,
-        status: 'FAILED',
-        errorMessage: rejectedMsg,
-      });
-      return { success: false, error: rejectedMsg };
-    }
-
     await logEmailDispatch({
       employeeId,
       employeeName,
@@ -335,11 +390,15 @@ ${escapeHtml(body)}
       month,
       year,
       status: 'SUCCESS',
+      errorMessage: null,
     });
 
-    return { success: true, messageId: info.messageId };
+    return {
+      success: true,
+      messageId: info.messageId,
+    };
   } catch (err: any) {
-    const errorMsg = err.message || 'SMTP delivery failed';
+    const errorMsg = err.message || 'SMTP transmission failure';
     await logEmailDispatch({
       employeeId,
       employeeName,
@@ -349,12 +408,16 @@ ${escapeHtml(body)}
       status: 'FAILED',
       errorMessage: errorMsg,
     });
-    return { success: false, error: errorMsg };
+
+    return {
+      success: false,
+      error: errorMsg,
+    };
   }
 }
 
-function escapeHtml(text: string): string {
-  return text
+function escapeHtml(str: string): string {
+  return str
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')

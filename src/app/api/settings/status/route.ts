@@ -4,7 +4,7 @@ import { getDatabaseStatus } from '@/lib/db-store';
 
 export async function GET() {
   try {
-    const smtp = getSMTPConfigStatus();
+    const smtp = await getSMTPConfigStatus();
     const db = await getDatabaseStatus();
 
     return NextResponse.json({

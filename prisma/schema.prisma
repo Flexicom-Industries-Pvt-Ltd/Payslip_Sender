@@ -38,3 +38,14 @@ model EmailDispatchLog {
   @@index([status])
 }
 
+model SmtpConfig {
+  id        String   @id @default("default")
+  host      String
+  port      Int      @default(587)
+  user      String
+  password  String
+  from      String
+  secure    Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+}
+

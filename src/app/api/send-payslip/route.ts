@@ -3,7 +3,7 @@ import { sendPayslipEmail, getSMTPConfigStatus } from '@/lib/mailer';
 
 export async function POST(request: NextRequest) {
   try {
-    const smtpStatus = getSMTPConfigStatus();
+    const smtpStatus = await getSMTPConfigStatus();
     if (!smtpStatus.isConfigured) {
       return NextResponse.json(
         {

@@ -366,6 +366,26 @@ async function runTestSuite() {
   // ----------------- TEST SUITE 6: MONTHLY PAYSLIP STATUS & ASSIGNMENT EXCLUSION -----------------
   console.log('\n✅ Suite 6: Monthly Delivery Status in Directory & Selection Exclusion');
 
+  // Create temporary test employees for status assertion
+  const tempE1 = await createEmployee({
+    employeeId: 'EMP001',
+    name: 'Sarah Connor',
+    email: 'sarah.connor@example.com',
+    department: 'Operations',
+  });
+  const tempE2 = await createEmployee({
+    employeeId: 'EMP002',
+    name: 'John Miller',
+    email: 'john.miller@example.com',
+    department: 'Engineering',
+  });
+  const tempE3 = await createEmployee({
+    employeeId: 'EMP003',
+    name: 'Elena Rostova',
+    email: 'elena.rostova@example.com',
+    department: 'Finance',
+  });
+
   // Test status calculation for October 2026
   const monthlyStatusRes = await getEmployeesWithMonthlyStatus({
     month: 'October',
@@ -410,6 +430,11 @@ async function runTestSuite() {
     'Filter employee directory by "Missed" status'
   );
 
+  // Cleanup temporary test employees
+  await deleteEmployee(tempE1.id);
+  await deleteEmployee(tempE2.id);
+  await deleteEmployee(tempE3.id);
+
   // Test Assignment Exclusion logic:
   // When assigning the next PDF, already assigned employee names must NOT appear in options
   const sampleEmps = [
@@ -443,7 +468,7 @@ async function runTestSuite() {
   // ----------------- TEST SUITE 7: DYNAMIC IN-APP SMTP CONFIGURATION -----------------
   console.log('\n⚙️ Suite 7: Dynamic In-App SMTP Configuration & Security');
 
-  const savedSmtp = saveStoredSMTPConfig({
+  const savedSmtp = await saveStoredSMTPConfig({
     host: 'smtppro.zoho.com',
     port: 465,
     user: 'hr@example-company.com',
@@ -462,7 +487,7 @@ async function runTestSuite() {
     'Client status does not expose the raw password'
   );
 
-  const storedConfig = getStoredSMTPConfig();
+  const storedConfig = await getStoredSMTPConfig();
   assert(
     storedConfig.password === 'super-secret-app-password',
     'Server securely retrieved stored credentials'
