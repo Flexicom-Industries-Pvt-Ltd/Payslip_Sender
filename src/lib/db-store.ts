@@ -88,17 +88,13 @@ function getInitialEmployees(): EmployeeRecord[] {
 function readLocalEmployees(): EmployeeRecord[] {
   ensureDataDir();
   if (!fs.existsSync(LOCAL_EMPLOYEES_FILE)) {
-    const initialSamples = getInitialEmployees();
-    fs.writeFileSync(LOCAL_EMPLOYEES_FILE, JSON.stringify(initialSamples, null, 2), 'utf-8');
-    return initialSamples;
+    return [];
   }
   try {
     const raw = fs.readFileSync(LOCAL_EMPLOYEES_FILE, 'utf-8');
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length === 0) {
-      const initialSamples = getInitialEmployees();
-      fs.writeFileSync(LOCAL_EMPLOYEES_FILE, JSON.stringify(initialSamples, null, 2), 'utf-8');
-      return initialSamples;
+    if (!Array.isArray(parsed)) {
+      return [];
     }
     return parsed.map((e: any) => ({
       ...e,
@@ -106,9 +102,7 @@ function readLocalEmployees(): EmployeeRecord[] {
       updatedAt: new Date(e.updatedAt),
     }));
   } catch {
-    const initialSamples = getInitialEmployees();
-    fs.writeFileSync(LOCAL_EMPLOYEES_FILE, JSON.stringify(initialSamples, null, 2), 'utf-8');
-    return initialSamples;
+    return [];
   }
 }
 
@@ -192,20 +186,6 @@ export async function getEmployees(filters?: { search?: string; department?: str
 
   if (isNeon) {
     try {
-      const emp1 = await prisma.employee.findUnique({ where: { employeeId: 'EMP001' } });
-      if (!emp1) {
-        const initial = getInitialEmployees();
-        await prisma.employee.createMany({
-          data: initial.map((e) => ({
-            employeeId: e.employeeId,
-            name: e.name,
-            email: e.email,
-            department: e.department,
-          })),
-          skipDuplicates: true,
-        });
-      }
-
       const where: any = {};
       if (filters?.department && filters.department !== 'all') {
         where.department = filters.department;
