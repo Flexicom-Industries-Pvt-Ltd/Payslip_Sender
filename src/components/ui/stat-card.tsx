@@ -19,14 +19,14 @@ export function StatCard({
   icon: Icon,
   trend,
   trendColor = 'blue',
-  iconBgColor = 'bg-blue-50',
-  iconColor = 'text-blue-600',
+  iconBgColor = 'bg-[#F2F8EA]',
+  iconColor = 'text-[#78B338]',
 }: StatCardProps) {
   const trendColorClasses = {
     green: 'text-emerald-600 bg-emerald-50',
     amber: 'text-amber-600 bg-amber-50',
     rose: 'text-rose-600 bg-rose-50',
-    blue: 'text-blue-600 bg-blue-50',
+    blue: 'text-[#3F6E15] bg-[#F2F8EA]',
   }[trendColor];
 
   return (

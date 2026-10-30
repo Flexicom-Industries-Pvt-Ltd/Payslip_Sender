@@ -445,7 +445,7 @@ export default function PayslipDistributionPage() {
           <div
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold ${
               currentStep === 'ASSIGN'
-                ? 'bg-blue-600 text-white shadow-xs'
+                ? 'bg-[#78B338] text-white shadow-xs'
                 : 'bg-slate-100 text-slate-600'
             }`}
           >
@@ -455,7 +455,7 @@ export default function PayslipDistributionPage() {
           <div
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold ${
               currentStep === 'PREVIEW'
-                ? 'bg-blue-600 text-white shadow-xs'
+                ? 'bg-[#78B338] text-white shadow-xs'
                 : 'bg-slate-100 text-slate-600'
             }`}
           >
@@ -465,7 +465,7 @@ export default function PayslipDistributionPage() {
           <div
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold ${
               currentStep === 'SENDING'
-                ? 'bg-blue-600 text-white shadow-xs'
+                ? 'bg-[#78B338] text-white shadow-xs'
                 : 'bg-slate-100 text-slate-600'
             }`}
           >
@@ -481,7 +481,7 @@ export default function PayslipDistributionPage() {
           <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div className="flex flex-wrap items-center gap-4">
               <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-primary" />
+                <Calendar className="w-4 h-4 text-[#78B338]" />
                 <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                   Disbursement Period:
                 </span>
@@ -490,7 +490,7 @@ export default function PayslipDistributionPage() {
                 <select
                   value={selectedMonth}
                   onChange={(e) => setSelectedMonth(e.target.value)}
-                  className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                  className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 font-semibold focus:outline-hidden focus:ring-2 focus:ring-[#96D055]"
                 >
                   {MONTHS.map((m) => (
                     <option key={m} value={m}>
@@ -502,7 +502,7 @@ export default function PayslipDistributionPage() {
                 <select
                   value={selectedYear}
                   onChange={(e) => setSelectedYear(e.target.value)}
-                  className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                  className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 font-semibold focus:outline-hidden focus:ring-2 focus:ring-[#96D055]"
                 >
                   {['2024', '2025', '2026', '2027'].map((yr) => (
                     <option key={yr} value={yr}>
@@ -538,7 +538,7 @@ export default function PayslipDistributionPage() {
               handleFileUpload(e.dataTransfer.files);
             }}
             onClick={() => fileInputRef.current?.click()}
-            className="border-2 border-dashed border-blue-200 hover:border-blue-500 bg-blue-50/20 hover:bg-blue-50/40 rounded-2xl p-7 text-center transition-all cursor-pointer group"
+            className="border-2 border-dashed border-[#D6EDBC] hover:border-[#96D055] bg-[#F2F8EA]/30 hover:bg-[#F2F8EA]/60 rounded-2xl p-7 text-center transition-all cursor-pointer group"
           >
             <input
               ref={fileInputRef}
@@ -548,7 +548,7 @@ export default function PayslipDistributionPage() {
               className="hidden"
               onChange={(e) => handleFileUpload(e.target.files)}
             />
-            <div className="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center mx-auto mb-2.5 group-hover:scale-105 transition-transform">
+            <div className="w-12 h-12 rounded-xl bg-[#F2F8EA] text-[#78B338] border border-[#D6EDBC] flex items-center justify-center mx-auto mb-2.5 group-hover:scale-105 transition-transform">
               <Upload className="w-6 h-6" />
             </div>
             <h3 className="text-sm font-bold text-slate-800">
@@ -627,7 +627,7 @@ export default function PayslipDistributionPage() {
                 <button
                   disabled={readyToSendItems.length === 0}
                   onClick={() => setCurrentStep('PREVIEW')}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-[#78B338] hover:bg-[#689F2E] text-white rounded-lg text-xs font-semibold shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   <span>Review {readyToSendItems.length} Assigned Emails</span>
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -658,7 +658,7 @@ export default function PayslipDistributionPage() {
                         >
                           <td className="py-3 px-4 font-mono font-medium text-slate-800">
                             <div className="flex items-center gap-2">
-                              <FileText className="w-4 h-4 text-blue-600 shrink-0" />
+                              <FileText className="w-4 h-4 text-[#78B338] shrink-0" />
                               <span className="truncate max-w-xs">{item.filename}</span>
                               <span className="text-[10px] text-slate-400">
                                 ({(item.fileSize / 1024).toFixed(1)} KB)
@@ -679,7 +679,7 @@ export default function PayslipDistributionPage() {
                                 </div>
                                 <button
                                   onClick={() => handleUnassignFile(item.filename)}
-                                  className="text-slate-400 hover:text-rose-600 p-1 rounded-md hover:bg-rose-50 transition-colors"
+                                  className="text-slate-400 hover:text-rose-600 p-1 rounded-md hover:bg-rose-50 transition-colors cursor-pointer"
                                   title="Unassign employee"
                                 >
                                   <UserX className="w-3.5 h-3.5" />
@@ -688,7 +688,7 @@ export default function PayslipDistributionPage() {
                             ) : (
                               <button
                                 onClick={() => handleOpenAssignModal(item)}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#F2F8EA] hover:bg-[#E4F3CE] text-[#3F6E15] border border-[#D6EDBC] rounded-lg text-xs font-semibold transition-colors cursor-pointer"
                               >
                                 <span>+ Assign Employee</span>
                               </button>
@@ -719,7 +719,7 @@ export default function PayslipDistributionPage() {
                             <div className="flex items-center justify-end gap-1.5">
                               <button
                                 onClick={() => handleOpenPdfPreview(item)}
-                                className="px-2 py-1 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors font-medium flex items-center gap-1 text-[11px] cursor-pointer"
+                                className="px-2 py-1 text-slate-600 hover:text-[#78B338] hover:bg-[#F2F8EA] rounded-md transition-colors font-medium flex items-center gap-1 text-[11px] cursor-pointer"
                                 title="Preview PDF in memory"
                               >
                                 <Eye className="w-3.5 h-3.5" />
@@ -729,7 +729,7 @@ export default function PayslipDistributionPage() {
                               {isAssigned && (
                                 <button
                                   onClick={() => handleOpenAssignModal(item)}
-                                  className="px-2 py-1 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors font-medium text-[11px] cursor-pointer"
+                                  className="px-2 py-1 text-slate-600 hover:text-[#78B338] hover:bg-[#F2F8EA] rounded-md transition-colors font-medium text-[11px] cursor-pointer"
                                 >
                                   Change
                                 </button>
@@ -799,7 +799,7 @@ export default function PayslipDistributionPage() {
 
             <button
               onClick={() => setIsConfirmSendOpen(true)}
-              className="inline-flex items-center gap-2 px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors cursor-pointer"
+              className="inline-flex items-center gap-2 px-5 py-2 text-xs font-bold text-white bg-[#78B338] hover:bg-[#689F2E] rounded-lg shadow-sm transition-colors cursor-pointer"
             >
               <Send className="w-3.5 h-3.5" />
               <span>Send All {readyToSendItems.length} Payslips</span>
@@ -829,7 +829,7 @@ export default function PayslipDistributionPage() {
                       onClick={() => setPreviewItemIndex(idx)}
                       className={`w-full text-left p-3 rounded-lg transition-all flex items-center justify-between cursor-pointer ${
                         isSelected
-                          ? 'bg-blue-50 border border-blue-200 shadow-2xs'
+                          ? 'bg-[#F2F8EA] border border-[#D6EDBC] shadow-2xs'
                           : 'hover:bg-slate-50'
                       }`}
                     >
@@ -878,7 +878,7 @@ export default function PayslipDistributionPage() {
                     <div className="space-y-4">
                       <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                         <div className="flex items-center gap-2">
-                          <Eye className="w-4 h-4 text-primary" />
+                          <Eye className="w-4 h-4 text-[#78B338]" />
                           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800">
                             Email Inspection ({previewItemIndex + 1} of {readyToSendItems.length})
                           </h3>
@@ -888,7 +888,7 @@ export default function PayslipDistributionPage() {
                           onClick={() => handleOpenPdfPreview(currentItem)}
                           className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-xs font-medium transition-colors cursor-pointer"
                         >
-                          <FileText className="w-3.5 h-3.5 text-blue-600" />
+                          <FileText className="w-3.5 h-3.5 text-[#78B338]" />
                           <span>View PDF ({currentItem.filename})</span>
                         </button>
                       </div>
@@ -909,10 +909,10 @@ export default function PayslipDistributionPage() {
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="w-16 font-semibold text-slate-500">Attachment:</span>
-                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 font-mono text-[11px]">
-                              <FileText className="w-3 h-3 text-blue-600" />
+                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#F2F8EA] text-[#3F6E15] border border-[#D6EDBC] font-mono text-[11px]">
+                              <FileText className="w-3 h-3 text-[#78B338]" />
                               <span>{currentItem.filename}</span>
-                              <span className="text-blue-400">
+                              <span className="text-[#78B338]/70">
                                 ({(currentItem.fileSize / 1024).toFixed(1)} KB)
                               </span>
                             </span>
@@ -924,8 +924,8 @@ export default function PayslipDistributionPage() {
                         </div>
                       </div>
 
-                      <div className="p-3 bg-blue-50/50 rounded-lg border border-blue-100 text-[11px] text-blue-900 flex items-center gap-2">
-                        <Lock className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                      <div className="p-3 bg-[#F2F8EA]/60 rounded-lg border border-[#D6EDBC] text-[11px] text-[#2E2A2A] flex items-center gap-2">
+                        <Lock className="w-3.5 h-3.5 text-[#78B338] shrink-0" />
                         <span>
                           Strict Isolation: Each employee receives their own email and attachment separately.
                           Other recipients are never CC’d or BCC’d.
@@ -946,7 +946,7 @@ export default function PayslipDistributionPage() {
                 </div>
                 <button
                   onClick={() => setIsConfirmSendOpen(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-[#78B338] hover:bg-[#689F2E] text-white rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer"
                 >
                   <Send className="w-3.5 h-3.5" />
                   <span>Confirm & Send Batch</span>
@@ -966,7 +966,7 @@ export default function PayslipDistributionPage() {
                 <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                   {isSendingActive ? (
                     <>
-                      <RotateCw className="w-4 h-4 text-blue-600 animate-spin" />
+                      <RotateCw className="w-4 h-4 text-[#78B338] animate-spin" />
                       <span>Sending Payslips in Progress...</span>
                     </>
                   ) : sendFinished ? (
@@ -1014,7 +1014,7 @@ export default function PayslipDistributionPage() {
                         handleClearAll();
                         setCurrentStep('ASSIGN');
                       }}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[#78B338] hover:bg-[#689F2E] rounded-lg shadow-xs transition-colors cursor-pointer"
                     >
                       <span>Start New Batch</span>
                     </button>
@@ -1110,8 +1110,8 @@ export default function PayslipDistributionPage() {
                             </span>
                           )}
                           {statusRecord.status === 'SENDING' && (
-                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 flex items-center gap-1">
-                              <RotateCw className="w-3 h-3 animate-spin" />
+                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-[#F2F8EA] text-[#3F6E15] flex items-center gap-1">
+                              <RotateCw className="w-3 h-3 animate-spin text-[#78B338]" />
                               <span>Dispatching...</span>
                             </span>
                           )}
@@ -1144,7 +1144,7 @@ export default function PayslipDistributionPage() {
                             <span className="text-slate-400 italic">Waiting in rate-limited queue</span>
                           )}
                           {statusRecord.status === 'SENDING' && (
-                            <span className="text-blue-600">Streaming ephemeral PDF buffer...</span>
+                            <span className="text-[#78B338] font-medium">Streaming ephemeral PDF buffer...</span>
                           )}
                         </td>
                       </tr>
@@ -1166,8 +1166,8 @@ export default function PayslipDistributionPage() {
         maxWidth="md"
       >
         <div className="space-y-4">
-          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-900 space-y-1">
-            <div className="font-semibold text-blue-950">Distribution Summary:</div>
+          <div className="p-3 bg-[#F2F8EA] border border-[#D6EDBC] rounded-lg text-xs text-[#2E2A2A] space-y-1">
+            <div className="font-semibold text-[#2E2A2A]">Distribution Summary:</div>
             <div>
               • <strong>Period:</strong> {selectedMonth} {selectedYear}
             </div>
@@ -1198,7 +1198,7 @@ export default function PayslipDistributionPage() {
             </button>
             <button
               onClick={handleStartSending}
-              className="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs transition-colors cursor-pointer"
+              className="px-4 py-2 text-xs font-bold text-white bg-[#78B338] hover:bg-[#689F2E] rounded-lg shadow-xs transition-colors cursor-pointer"
             >
               Confirm & Start Sending
             </button>
@@ -1215,11 +1215,11 @@ export default function PayslipDistributionPage() {
         maxWidth="md"
       >
         <div className="space-y-4">
-          <div className="p-2.5 bg-blue-50/70 border border-blue-200/80 rounded-lg text-xs text-blue-900 flex items-center justify-between">
+          <div className="p-2.5 bg-[#F2F8EA]/70 border border-[#D6EDBC] rounded-lg text-xs text-[#2E2A2A] flex items-center justify-between">
             <span className="font-semibold">
               Available Employees: {availableEmployeesInModal.length}
             </span>
-            <span className="text-[11px] text-blue-700">
+            <span className="text-[11px] text-[#3F6E15]">
               ({assignments && Object.keys(assignments).length} already assigned)
             </span>
           </div>
@@ -1231,7 +1231,7 @@ export default function PayslipDistributionPage() {
               placeholder="Search by name, ID, or email..."
               value={assignSearch}
               onChange={(e) => setAssignSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-[#96D055]"
               autoFocus
             />
           </div>
@@ -1250,10 +1250,10 @@ export default function PayslipDistributionPage() {
                 <button
                   key={emp.id}
                   onClick={() => handleSelectEmployeeForFile(emp.id)}
-                  className="w-full text-left p-3 hover:bg-blue-50/70 transition-colors flex items-center justify-between cursor-pointer group"
+                  className="w-full text-left p-3 hover:bg-[#F2F8EA]/70 transition-colors flex items-center justify-between cursor-pointer group"
                 >
                   <div>
-                    <div className="font-semibold text-xs text-slate-900 group-hover:text-blue-700">
+                    <div className="font-semibold text-xs text-slate-900 group-hover:text-[#3F6E15]">
                       {emp.name}
                     </div>
                     <div className="text-[11px] font-mono text-slate-500">{emp.email}</div>
@@ -1262,10 +1262,10 @@ export default function PayslipDistributionPage() {
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700 group-hover:bg-blue-100 group-hover:text-blue-800">
+                    <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700 group-hover:bg-[#E4F3CE] group-hover:text-[#2E2A2A]">
                       {emp.employeeId}
                     </span>
-                    <span className="text-xs text-blue-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span className="text-xs text-[#78B338] font-bold opacity-0 group-hover:opacity-100 transition-opacity">
                       Select →
                     </span>
                   </div>

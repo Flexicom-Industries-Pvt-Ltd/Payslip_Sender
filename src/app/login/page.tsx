@@ -43,10 +43,10 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col justify-center items-center p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-800 p-8">
+    <div className="min-h-screen bg-[#221E1E] flex flex-col justify-center items-center p-4">
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-[#332D2D] p-8">
         <div className="flex flex-col items-center text-center mb-6">
-          <div className="mb-4 p-2 bg-slate-50 border border-slate-100 rounded-xl shadow-2xs">
+          <div className="mb-4 p-2 bg-[#F9FAF6] border border-[#E8EAE1] rounded-xl shadow-2xs">
             <img
               src="/sterling-logo.jpg"
               alt="Sterling Distillers Private Limited"
@@ -77,7 +77,7 @@ export default function LoginPage() {
                 value={passcode}
                 onChange={(e) => setPasscode(e.target.value)}
                 placeholder="Enter passcode (Default: admin123)"
-                className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-slate-800"
+                className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-[#96D055] focus:bg-white transition-all text-slate-800"
                 autoFocus
               />
               <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
@@ -90,7 +90,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold flex items-center justify-center gap-2 shadow-xs transition-all disabled:opacity-70 cursor-pointer"
+            className="w-full py-2.5 px-4 bg-[#78B338] hover:bg-[#689F2E] text-white rounded-lg text-sm font-semibold flex items-center justify-center gap-2 shadow-xs transition-all disabled:opacity-70 cursor-pointer"
           >
             {loading ? (
               <span>Authenticating...</span>

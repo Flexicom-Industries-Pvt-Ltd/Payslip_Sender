@@ -37,9 +37,9 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col shrink-0 border-r border-slate-800 select-none">
+    <aside className="w-64 bg-[#221E1E] text-stone-300 flex flex-col shrink-0 border-r border-[#332D2D] select-none">
       {/* Brand Header */}
-      <div className="h-20 flex items-center px-4 border-b border-slate-800">
+      <div className="h-20 flex items-center px-4 border-b border-[#332D2D]">
         <div className="w-full bg-white rounded-lg px-2.5 py-1.5 flex items-center justify-center shadow-xs">
           <img
             src="/sterling-logo.jpg"
@@ -51,7 +51,7 @@ export function Sidebar() {
 
       {/* Navigation items */}
       <div className="flex-1 py-6 px-3 space-y-1 overflow-y-auto">
-        <div className="px-3 mb-2 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+        <div className="px-3 mb-2 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">
           HR Operations
         </div>
         {NAV_ITEMS.map((item) => {
@@ -64,13 +64,13 @@ export function Sidebar() {
               href={item.href}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
                 isActive
-                  ? 'bg-blue-600 text-white shadow-xs font-semibold'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
+                  ? 'bg-[#78B338] text-white shadow-xs font-semibold'
+                  : 'text-stone-300 hover:text-white hover:bg-[#342F2F]'
               }`}
             >
               <Icon
                 className={`w-4 h-4 shrink-0 ${
-                  isActive ? 'text-white' : 'text-slate-400'
+                  isActive ? 'text-white' : 'text-stone-400'
                 }`}
               />
               <span>{item.name}</span>

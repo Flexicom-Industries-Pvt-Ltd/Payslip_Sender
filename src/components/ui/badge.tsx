@@ -17,7 +17,7 @@ export function Badge({ children, variant = 'default', className = '', title }: 
   } else if (variant === 'destructive') {
     colorStyles = 'bg-rose-50 text-rose-700 border-rose-200';
   } else if (variant === 'info') {
-    colorStyles = 'bg-blue-50 text-blue-700 border-blue-200';
+    colorStyles = 'bg-[#F2F8EA] text-[#3F6E15] border-[#D6EDBC]';
   } else if (variant === 'outline') {
     colorStyles = 'bg-transparent text-slate-600 border-slate-300';
   }

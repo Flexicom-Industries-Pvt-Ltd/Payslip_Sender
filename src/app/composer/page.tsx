@@ -103,7 +103,7 @@ export default function EmailComposerPage() {
 
           <button
             onClick={handleSave}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs transition-colors"
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[#78B338] hover:bg-[#689F2E] rounded-lg shadow-xs transition-colors cursor-pointer"
           >
             {saveSuccess ? (
               <>
@@ -136,14 +136,14 @@ export default function EmailComposerPage() {
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 placeholder="e.g. Salary Slip – {{month}} {{year}}"
-                className="w-full px-3 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:bg-white text-slate-900 font-medium"
+                className="w-full px-3 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-[#96D055] focus:bg-white text-slate-900 font-medium"
               />
             </div>
 
             {/* Variable Pills */}
             <div className="p-3 bg-slate-50 rounded-lg border border-slate-200/80">
               <div className="text-[11px] font-semibold text-slate-600 mb-2 flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-blue-500" />
+                <Sparkles className="w-3 h-3 text-[#78B338]" />
                 <span>Click to insert dynamic variable tag:</span>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -152,11 +152,11 @@ export default function EmailComposerPage() {
                     key={v.tag}
                     type="button"
                     onClick={() => insertVariable(v.tag, 'body')}
-                    className="group inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-slate-200 rounded-md text-xs font-mono text-blue-600 hover:border-blue-400 hover:bg-blue-50/50 transition-all shadow-2xs cursor-pointer"
+                    className="group inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-slate-200 rounded-md text-xs font-mono text-[#4B8904] hover:border-[#96D055] hover:bg-[#F2F8EA] transition-all shadow-2xs cursor-pointer"
                     title={v.description}
                   >
                     <span>{v.tag}</span>
-                    <span className="text-[10px] text-slate-400 font-sans group-hover:text-blue-500">
+                    <span className="text-[10px] text-slate-400 font-sans group-hover:text-[#78B338]">
                       +
                     </span>
                   </button>
@@ -176,12 +176,12 @@ export default function EmailComposerPage() {
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
                 placeholder="Type your payslip notification email body..."
-                className="w-full px-3 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:bg-white text-slate-900 font-sans leading-relaxed"
+                className="w-full px-3 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-[#96D055] focus:bg-white text-slate-900 font-sans leading-relaxed"
               />
             </div>
 
-            <div className="flex items-center gap-2 text-[11px] text-slate-500 bg-blue-50/50 p-2.5 rounded-lg border border-blue-100">
-              <Info className="w-4 h-4 text-blue-500 shrink-0" />
+            <div className="flex items-center gap-2 text-[11px] text-slate-600 bg-[#F2F8EA] p-2.5 rounded-lg border border-[#D6EDBC]">
+              <Info className="w-4 h-4 text-[#78B338] shrink-0" />
               <span>
                 Each recipient will strictly receive their own individual salary slip PDF as an attachment.
                 Other employee details are never visible.
@@ -259,7 +259,7 @@ export default function EmailComposerPage() {
             <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
               <Link
                 href="/payslips"
-                className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors"
+                className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-[#78B338] hover:bg-[#689F2E] text-white rounded-lg text-xs font-semibold shadow-xs transition-colors"
               >
                 <span>Proceed to Payslip Distribution</span>
                 <Send className="w-3.5 h-3.5" />

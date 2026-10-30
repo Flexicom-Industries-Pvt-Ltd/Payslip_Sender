@@ -321,7 +321,7 @@ export default function EmployeesPage() {
 
           <button
             onClick={handleOpenAdd}
-            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-xs"
+            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-[#78B338] rounded-lg hover:bg-[#689F2E] transition-colors shadow-xs"
           >
             <UserPlus className="w-3.5 h-3.5" />
             <span>Add Employee</span>
@@ -333,14 +333,14 @@ export default function EmployeesPage() {
       <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2 text-xs font-bold text-slate-700 uppercase tracking-wider">
-            <Calendar className="w-4 h-4 text-blue-600" />
+            <Calendar className="w-4 h-4 text-[#78B338]" />
             <span>Delivery Period:</span>
           </div>
           <div className="flex items-center gap-1.5">
             <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
-              className="px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+              className="px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 font-semibold focus:outline-hidden focus:ring-2 focus:ring-[#96D055]"
             >
               {MONTHS.map((m) => (
                 <option key={m} value={m}>
@@ -352,7 +352,7 @@ export default function EmployeesPage() {
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(e.target.value)}
-              className="px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 font-semibold focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+              className="px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 font-semibold focus:outline-hidden focus:ring-2 focus:ring-[#96D055]"
             >
               {['2024', '2025', '2026', '2027'].map((yr) => (
                 <option key={yr} value={yr}>
@@ -416,7 +416,7 @@ export default function EmployeesPage() {
 
           <Link
             href="/payslips"
-            className="ml-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold shadow-2xs text-xs transition-colors"
+            className="ml-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#78B338] hover:bg-[#689F2E] text-white rounded-lg font-semibold shadow-2xs text-xs transition-colors"
           >
             <Send className="w-3.5 h-3.5" />
             <span>Distribute Payslips</span>
@@ -433,7 +433,7 @@ export default function EmployeesPage() {
             placeholder="Search by name, ID, or email..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-slate-800"
+            className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-[#96D055] focus:bg-white transition-all text-slate-800"
           />
           {search && (
             <button
@@ -451,7 +451,7 @@ export default function EmployeesPage() {
             <select
               value={departmentFilter}
               onChange={(e) => setDepartmentFilter(e.target.value)}
-              className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:outline-hidden focus:ring-2 focus:ring-blue-500 font-medium"
+              className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:outline-hidden focus:ring-2 focus:ring-[#96D055] font-medium"
             >
               <option value="all">All Departments</option>
               {allDepartments.map((dept) => (
@@ -559,7 +559,7 @@ export default function EmployeesPage() {
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => handleOpenEdit(emp)}
-                            className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                            className="p-1.5 text-slate-500 hover:text-[#78B338] hover:bg-[#F2F8EA] rounded-md transition-colors"
                             title="Edit Employee"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
@@ -607,7 +607,7 @@ export default function EmployeesPage() {
               placeholder="e.g. EMP105"
               value={formData.employeeId}
               onChange={(e) => setFormData({ ...formData, employeeId: e.target.value })}
-              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:bg-white"
+              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-[#96D055] focus:bg-white"
             />
           </div>
 
@@ -621,7 +621,7 @@ export default function EmployeesPage() {
               placeholder="e.g. Sarah Connor"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:bg-white"
+              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-[#96D055] focus:bg-white"
             />
           </div>
 
@@ -632,10 +632,10 @@ export default function EmployeesPage() {
             <input
               type="email"
               required
-              placeholder="e.g. sarah.connor@company.com"
+              placeholder="e.g. sarah.connor@sterlingdistillers.com"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:bg-white"
+              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-[#96D055] focus:bg-white"
             />
           </div>
 
@@ -645,10 +645,10 @@ export default function EmployeesPage() {
             </label>
             <input
               type="text"
-              placeholder="e.g. Engineering, Human Resources, Finance"
+              placeholder="e.g. Operations, Finance, Production"
               value={formData.department}
               onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:bg-white"
+              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-[#96D055] focus:bg-white"
             />
           </div>
 
@@ -656,14 +656,14 @@ export default function EmployeesPage() {
             <button
               type="button"
               onClick={() => setIsAddModalOpen(false)}
-              className="px-3.5 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+              className="px-3.5 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs transition-colors disabled:opacity-50"
+              className="px-4 py-2 text-xs font-semibold text-white bg-[#78B338] hover:bg-[#689F2E] rounded-lg shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
             >
               {isSubmitting ? 'Saving...' : 'Create Employee'}
             </button>
@@ -695,7 +695,7 @@ export default function EmployeesPage() {
               required
               value={formData.employeeId}
               onChange={(e) => setFormData({ ...formData, employeeId: e.target.value })}
-              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:bg-white"
+              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-[#96D055] focus:bg-white"
             />
           </div>
 
@@ -708,7 +708,7 @@ export default function EmployeesPage() {
               required
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:bg-white"
+              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-[#96D055] focus:bg-white"
             />
           </div>
 
@@ -721,7 +721,7 @@ export default function EmployeesPage() {
               required
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:bg-white"
+              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-[#96D055] focus:bg-white"
             />
           </div>
 
@@ -733,7 +733,7 @@ export default function EmployeesPage() {
               type="text"
               value={formData.department}
               onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:bg-white"
+              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-[#96D055] focus:bg-white"
             />
           </div>
 
@@ -741,14 +741,14 @@ export default function EmployeesPage() {
             <button
               type="button"
               onClick={() => setIsEditModalOpen(false)}
-              className="px-3.5 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+              className="px-3.5 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs transition-colors disabled:opacity-50"
+              className="px-4 py-2 text-xs font-semibold text-white bg-[#78B338] hover:bg-[#689F2E] rounded-lg shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
             >
               {isSubmitting ? 'Updating...' : 'Save Changes'}
             </button>
@@ -822,7 +822,7 @@ export default function EmployeesPage() {
                 </div>
                 <div className="bg-white/80 p-2 rounded-lg border border-emerald-200/60">
                   <span className="text-slate-500 text-[11px] block">Existing Records Updated:</span>
-                  <span className="text-blue-700 font-bold text-sm">
+                  <span className="text-[#3F6E15] font-bold text-sm">
                     {importSummary.updatedCount}
                   </span>
                 </div>
@@ -836,20 +836,20 @@ export default function EmployeesPage() {
           )}
 
           {/* STEP 1: Download Template Callout */}
-          <div className="p-3.5 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200/80 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+          <div className="p-3.5 bg-gradient-to-r from-[#F2F8EA] to-emerald-50 border border-[#D6EDBC] rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
             <div className="space-y-0.5">
-              <div className="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
-                <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
+              <div className="text-xs font-bold text-[#2E2A2A] flex items-center gap-1.5">
+                <FileSpreadsheet className="w-4 h-4 text-[#78B338]" />
                 <span>Step 1: Need the pre-formatted Excel template?</span>
               </div>
-              <p className="text-[11px] text-emerald-800 leading-relaxed">
+              <p className="text-[11px] text-[#4B4545] leading-relaxed">
                 Download the official template with pre-styled columns, sample rows, and matching guidelines.
               </p>
             </div>
             <a
               href="/api/employees/export?template=true"
               download="Sterling_Distillers_Employee_Import_Template.xlsx"
-              className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-xs transition-colors"
+              className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#78B338] hover:bg-[#689F2E] text-white rounded-lg text-xs font-bold shadow-xs transition-colors cursor-pointer"
             >
               <Download className="w-3.5 h-3.5" />
               <span>Download Template</span>
@@ -861,8 +861,8 @@ export default function EmployeesPage() {
             <div className="text-xs font-bold text-slate-800 mb-1.5">
               Step 2: Upload Completed File (.xlsx, .xls, .csv)
             </div>
-            <div className="border-2 border-dashed border-slate-200 hover:border-blue-500 rounded-xl p-5 text-center bg-slate-50/60 hover:bg-blue-50/20 transition-all">
-              <FileSpreadsheet className="w-8 h-8 text-blue-600 mx-auto mb-1.5" />
+            <div className="border-2 border-dashed border-slate-200 hover:border-[#96D055] rounded-xl p-5 text-center bg-slate-50/60 hover:bg-[#F2F8EA]/30 transition-all">
+              <FileSpreadsheet className="w-8 h-8 text-[#78B338] mx-auto mb-1.5" />
               <div className="text-xs font-semibold text-slate-800">
                 {importFile ? importFile.name : 'Select or drag your filled spreadsheet here'}
               </div>
@@ -879,7 +879,7 @@ export default function EmployeesPage() {
                     setImportFile(e.target.files[0]);
                   }
                 }}
-                className="mt-2.5 text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
+                className="mt-2.5 text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-[#F2F8EA] file:text-[#3F6E15] hover:file:bg-[#E4F3CE] cursor-pointer"
               />
             </div>
           </div>
@@ -913,14 +913,14 @@ export default function EmployeesPage() {
             <button
               type="button"
               onClick={() => setIsImportModalOpen(false)}
-              className="px-3.5 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+              className="px-3.5 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={!importFile || importLoading}
-              className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs transition-colors disabled:opacity-50"
+              className="px-4 py-2 text-xs font-semibold text-white bg-[#78B338] hover:bg-[#689F2E] rounded-lg shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
             >
               {importLoading ? 'Processing...' : 'Upload & Import Employees'}
             </button>

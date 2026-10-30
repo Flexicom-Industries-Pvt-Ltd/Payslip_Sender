@@ -215,7 +215,7 @@ export default function SettingsPage() {
       <div className="max-w-4xl bg-white rounded-xl border border-slate-200/80 p-6 sm:p-8 shadow-xs space-y-6">
         <div className="flex items-center justify-between pb-4 border-b border-slate-100">
             <div className="flex items-center gap-2.5">
-              <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600">
+              <div className="p-2.5 rounded-xl bg-[#F2F8EA] text-[#78B338]">
                 <Server className="w-5 h-5" />
               </div>
               <div>
@@ -243,7 +243,7 @@ export default function SettingsPage() {
           <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80">
             <div className="flex items-center justify-between mb-2">
               <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                <Sparkles className="w-3.5 h-3.5 text-[#78B338]" />
                 <span>One-Click Provider Quick Fill:</span>
               </span>
             </div>
@@ -251,7 +251,7 @@ export default function SettingsPage() {
               <button
                 type="button"
                 onClick={() => applyPreset('zoho')}
-                className="px-3 py-1.5 bg-white border border-slate-200 hover:border-blue-400 hover:bg-blue-50/50 rounded-lg text-xs font-semibold text-slate-700 transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                className="px-3 py-1.5 bg-white border border-slate-200 hover:border-[#96D055] hover:bg-[#F2F8EA] rounded-lg text-xs font-semibold text-slate-700 transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
               >
                 <span>🏢 Zoho Workspace / Mail</span>
               </button>
@@ -324,7 +324,7 @@ export default function SettingsPage() {
                   placeholder="e.g. smtppro.zoho.com or smtp.gmail.com"
                   value={formData.host}
                   onChange={(e) => setFormData({ ...formData, host: e.target.value })}
-                  className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:bg-white font-mono text-slate-900"
+                  className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-[#96D055] focus:bg-white font-mono text-slate-900"
                 />
               </div>
 
@@ -345,7 +345,7 @@ export default function SettingsPage() {
                       secure: portNum === 465,
                     });
                   }}
-                  className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:bg-white font-mono text-slate-900"
+                  className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-[#96D055] focus:bg-white font-mono text-slate-900"
                 />
               </div>
             </div>
@@ -358,10 +358,10 @@ export default function SettingsPage() {
                 <input
                   type="email"
                   required
-                  placeholder="e.g. hr@yourcompany.com"
+                  placeholder="e.g. hr@sterlingdistillers.com"
                   value={formData.user}
                   onChange={(e) => setFormData({ ...formData, user: e.target.value })}
-                  className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:bg-white text-slate-900"
+                  className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-[#96D055] focus:bg-white text-slate-900"
                 />
               </div>
 
@@ -379,7 +379,7 @@ export default function SettingsPage() {
                     }
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="w-full px-3 py-2 pr-9 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:bg-white text-slate-900"
+                    className="w-full px-3 py-2 pr-9 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-[#96D055] focus:bg-white text-slate-900"
                   />
                   <button
                     type="button"
@@ -401,7 +401,7 @@ export default function SettingsPage() {
                 placeholder='e.g. Sterling Distillers HR <sales@sterlingdistillers.com>'
                 value={formData.from}
                 onChange={(e) => setFormData({ ...formData, from: e.target.value })}
-                className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:bg-white text-slate-900"
+                className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-[#96D055] focus:bg-white text-slate-900"
               />
               <p className="text-[11px] text-slate-400 mt-1">
                 The friendly display name employees will see in their inbox.
@@ -414,7 +414,7 @@ export default function SettingsPage() {
                 id="secureToggle"
                 checked={formData.secure}
                 onChange={(e) => setFormData({ ...formData, secure: e.target.checked })}
-                className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer"
+                className="w-4 h-4 rounded text-[#78B338] focus:ring-[#96D055] border-slate-300 cursor-pointer"
               />
               <label htmlFor="secureToggle" className="text-xs font-medium text-slate-700 cursor-pointer">
                 Use Direct SSL/TLS (Check if using port 465, uncheck for port 587 STARTTLS)
@@ -441,14 +441,14 @@ export default function SettingsPage() {
                   disabled={testingSmtp || (!formData.host && !formData.user)}
                   className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer"
                 >
-                  <Send className="w-3.5 h-3.5 text-blue-600" />
+                  <Send className="w-3.5 h-3.5 text-[#78B338]" />
                   <span>{testingSmtp ? 'Testing Handshake...' : 'Test Connection'}</span>
                 </button>
 
                 <button
                   type="submit"
                   disabled={saving || !formData.host || !formData.user}
-                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-5 py-2 bg-[#78B338] hover:bg-[#689F2E] text-white rounded-lg text-xs font-bold shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   <Save className="w-3.5 h-3.5" />
                   <span>{saving ? 'Saving...' : 'Save Settings'}</span>
