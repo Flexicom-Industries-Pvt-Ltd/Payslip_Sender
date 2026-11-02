@@ -104,31 +104,17 @@ export function Sidebar() {
           })}
         </div>
 
-        {/* Install Desktop App section at bottom of navbar - ONLY visible in web browser, NEVER in Electron */}
+        {/* Install Desktop App button at bottom of navbar - ONLY visible in web browser, NEVER in Electron */}
         {!isDesktopApp && (
-          <div className="p-3 border-t border-[#332D2D] bg-[#1A1717]">
-            <div className="p-3 rounded-xl bg-gradient-to-b from-[#2B2525] to-[#201C1C] border border-[#3E3636] shadow-md">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="p-1.5 rounded-lg bg-[#78B338]/20 text-[#96D055] border border-[#78B338]/30">
-                  <MonitorDown className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="text-xs font-bold text-white leading-tight">Desktop Client</div>
-                  <div className="text-[10px] text-stone-400">Windows Installer (.exe)</div>
-                </div>
-              </div>
-              <p className="text-[11px] text-stone-300 leading-relaxed mb-3">
-                Experience seamless 1-click access with the official desktop application.
-              </p>
-              <button
-                type="button"
-                onClick={() => setShowInstallModal(true)}
-                className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-[#78B338] hover:bg-[#689F2E] text-white text-xs font-bold shadow-xs transition-colors cursor-pointer group"
-              >
-                <Download className="w-3.5 h-3.5 transition-transform group-hover:translate-y-0.5" />
-                <span>Install Now</span>
-              </button>
-            </div>
+          <div className="p-3 border-t border-[#332D2D]">
+            <button
+              type="button"
+              onClick={() => setShowInstallModal(true)}
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg bg-[#78B338] hover:bg-[#689F2E] text-white text-xs font-bold shadow-xs transition-all cursor-pointer group"
+            >
+              <Download className="w-4 h-4 transition-transform group-hover:translate-y-0.5" />
+              <span>Install Now</span>
+            </button>
           </div>
         )}
       </aside>
