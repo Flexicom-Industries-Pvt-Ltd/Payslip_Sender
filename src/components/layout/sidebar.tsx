@@ -9,11 +9,7 @@ import {
   MailCheck,
   Settings,
   Download,
-  MonitorDown,
   X,
-  CheckCircle2,
-  ShieldCheck,
-  Sparkles,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -149,43 +145,22 @@ export function Sidebar() {
             </div>
 
             {/* Modal Content */}
-            <div className="p-6 space-y-5">
-              <div className="space-y-2.5">
-                <div className="flex items-start gap-2.5 text-xs text-slate-700">
-                  <CheckCircle2 className="w-4 h-4 text-[#78B338] shrink-0 mt-0.5" />
-                  <span>
-                    <strong>Native Standalone App:</strong> No browser tabs, bookmark bars, or URL distractions.
-                  </span>
-                </div>
-                <div className="flex items-start gap-2.5 text-xs text-slate-700">
-                  <CheckCircle2 className="w-4 h-4 text-[#78B338] shrink-0 mt-0.5" />
-                  <span>
-                    <strong>Clean Interface:</strong> Default menu strip (&quot;File/Edit/View&quot;) is completely removed for maximum workspace.
-                  </span>
-                </div>
-                <div className="flex items-start gap-2.5 text-xs text-slate-700">
-                  <CheckCircle2 className="w-4 h-4 text-[#78B338] shrink-0 mt-0.5" />
-                  <span>
-                    <strong>Official Company Branding:</strong> Installed with the Sterling Distillers logo on your Desktop and Start Menu.
-                  </span>
-                </div>
-              </div>
-
+            <div className="p-6 space-y-4">
               {/* Setup Steps */}
               <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 text-xs text-slate-600 space-y-1.5">
                 <span className="font-bold text-slate-800 uppercase tracking-wider text-[10px] block mb-1">
                   Quick 3-Step Setup:
                 </span>
                 <div className="flex items-center gap-2">
-                  <span className="w-4 h-4 rounded-full bg-[#78B338] text-white text-[10px] font-bold flex items-center justify-center">1</span>
+                  <span className="w-4 h-4 rounded-full bg-[#78B338] text-white text-[10px] font-bold flex items-center justify-center shrink-0">1</span>
                   <span>Download the <strong>.exe installer</strong> below.</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="w-4 h-4 rounded-full bg-[#78B338] text-white text-[10px] font-bold flex items-center justify-center">2</span>
-                  <span>Run the installer (choose Desktop shortcut option).</span>
+                  <span className="w-4 h-4 rounded-full bg-[#78B338] text-white text-[10px] font-bold flex items-center justify-center shrink-0">2</span>
+                  <span>Run setup and select Desktop shortcut.</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="w-4 h-4 rounded-full bg-[#78B338] text-white text-[10px] font-bold flex items-center justify-center">3</span>
+                  <span className="w-4 h-4 rounded-full bg-[#78B338] text-white text-[10px] font-bold flex items-center justify-center shrink-0">3</span>
                   <span>Launch directly from your Desktop anytime!</span>
                 </div>
               </div>
