@@ -11,8 +11,6 @@ import {
   Download,
   X,
   ScrollText,
-  PanelLeftClose,
-  PanelLeftOpen,
 } from 'lucide-react';
 import { useSidebar } from './sidebar-context';
 
@@ -46,7 +44,7 @@ const NAV_ITEMS = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { isCollapsed, toggleSidebar } = useSidebar();
+  const { isCollapsed } = useSidebar();
   const [isDesktopApp, setIsDesktopApp] = useState(false);
   const [showInstallModal, setShowInstallModal] = useState(false);
 
@@ -139,26 +137,7 @@ export function Sidebar() {
             })}
           </div>
 
-          {/* Bottom Collapse Toggle inside Sidebar */}
-          <div className="pt-4 border-t border-[#332D2D] mt-4">
-            <button
-              type="button"
-              onClick={toggleSidebar}
-              title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-              className={`w-full flex items-center ${
-                isCollapsed ? 'justify-center px-2 py-2' : 'gap-3 px-3 py-2'
-              } rounded-lg text-xs font-medium text-stone-400 hover:text-white hover:bg-[#342F2F] transition-all cursor-pointer`}
-            >
-              {isCollapsed ? (
-                <PanelLeftOpen className="w-4 h-4 text-stone-400" />
-              ) : (
-                <>
-                  <PanelLeftClose className="w-4 h-4 text-stone-400" />
-                  <span>Collapse Sidebar</span>
-                </>
-              )}
-            </button>
-          </div>
+
         </div>
 
         {/* Install Desktop App button at bottom of navbar - ONLY visible in web browser, NEVER in Electron */}
