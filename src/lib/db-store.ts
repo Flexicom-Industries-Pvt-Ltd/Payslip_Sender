@@ -387,7 +387,23 @@ export async function deleteEmployee(id: string) {
   const isNeon = await isNeonPostgresActive();
   if (isNeon) {
     try {
-      return await prisma.employee.delete({ where: { id } });
+      // Find employee first to clean up associated dispatch logs
+      const emp = await prisma.employee.findUnique({ where: { id } });
+      const deleted = await prisma.employee.delete({ where: { id } });
+
+      if (emp) {
+        // Automatically delete dispatch logs for the deleted employee
+        await prisma.emailDispatchLog.deleteMany({
+          where: {
+            OR: [
+              { employeeId: emp.employeeId },
+              { email: emp.email },
+            ],
+          },
+        });
+      }
+
+      return deleted;
     } catch {
       // fallback
     }
@@ -400,6 +416,20 @@ export async function deleteEmployee(id: string) {
   }
   const [deleted] = list.splice(index, 1);
   writeLocalEmployees(list);
+
+  // Clean up local fallback logs
+  try {
+    const localLogs = readLocalLogs();
+    const cleaned = localLogs.filter(
+      (l) =>
+        l.employeeId.toLowerCase() !== deleted.employeeId.toLowerCase() &&
+        l.email.toLowerCase() !== deleted.email.toLowerCase()
+    );
+    writeLocalLogs(cleaned);
+  } catch {
+    // ignore
+  }
+
   return deleted;
 }
 
@@ -637,8 +667,18 @@ export async function getEmployeesWithMonthlyStatus(options?: {
     allLogsForYear = localLogs.filter((l) => l.year === year);
   }
 
+  // Only consider logs belonging to existing, active employees
+  const activeEmpIds = new Set(employees.map((e) => e.employeeId.toLowerCase()));
+  const activeEmails = new Set(employees.map((e) => e.email.toLowerCase()));
+
+  const activeLogsForYear = allLogsForYear.filter(
+    (l) =>
+      activeEmpIds.has(l.employeeId.toLowerCase()) ||
+      activeEmails.has(l.email.toLowerCase())
+  );
+
   // Filter logs for the specific selected month
-  const logsForPeriod = allLogsForYear.filter(
+  const logsForPeriod = activeLogsForYear.filter(
     (l) => l.month.toLowerCase() === month.toLowerCase()
   );
 
@@ -659,7 +699,7 @@ export async function getEmployeesWithMonthlyStatus(options?: {
   const employeeYearlyMaps = new Map<string, Record<string, 'SENT' | 'FAILED'>>();
   const employeeHistories = new Map<string, MonthStatusRecord[]>();
 
-  for (const log of allLogsForYear) {
+  for (const log of activeLogsForYear) {
     const key = log.employeeId.toLowerCase();
 
     // Yearly month map
@@ -686,25 +726,28 @@ export async function getEmployeesWithMonthlyStatus(options?: {
     });
   }
 
-  // Calculate active months summary for the period jumper
+  // Calculate active months summary for the period jumper (strictly for existing employees)
   const monthCounts = new Map<string, Set<string>>();
-  for (const log of allLogsForYear) {
-    if (log.status === 'SUCCESS') {
-      if (!monthCounts.has(log.month)) {
-        monthCounts.set(log.month, new Set());
+  if (employees.length > 0) {
+    for (const log of activeLogsForYear) {
+      if (log.status === 'SUCCESS') {
+        if (!monthCounts.has(log.month)) {
+          monthCounts.set(log.month, new Set());
+        }
+        monthCounts.get(log.month)!.add(log.employeeId.toLowerCase());
       }
-      monthCounts.get(log.month)!.add(log.employeeId.toLowerCase());
     }
   }
 
-  const activeMonths: ActiveMonthSummary[] = Array.from(monthCounts.entries()).map(
-    ([m, empSet]) => ({
-      month: m,
-      year,
-      sentCount: empSet.size,
-      totalCount: employees.length,
-    })
-  );
+  const activeMonths: ActiveMonthSummary[] =
+    employees.length === 0
+      ? []
+      : Array.from(monthCounts.entries()).map(([m, empSet]) => ({
+          month: m,
+          year,
+          sentCount: empSet.size,
+          totalCount: employees.length,
+        }));
 
   let enriched: EmployeeWithStatus[] = employees.map((emp) => {
     const key = emp.employeeId.toLowerCase();
