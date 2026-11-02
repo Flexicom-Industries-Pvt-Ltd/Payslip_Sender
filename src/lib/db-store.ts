@@ -551,7 +551,7 @@ export async function logEmailDispatch(data: {
   const isNeon = await isNeonPostgresActive();
   if (isNeon) {
     try {
-      return await prisma.emailDispatchLog.create({
+      return await (prisma.emailDispatchLog.create as any)({
         data: {
           employeeId: data.employeeId,
           employeeName: data.employeeName,
@@ -664,14 +664,14 @@ export async function getEnterpriseAuditLogs(options: AuditLogFilterOptions = {}
       }
 
       const [logs, totalCount, allLogsForMetrics] = await Promise.all([
-        prisma.emailDispatchLog.findMany({
+        (prisma.emailDispatchLog.findMany as any)({
           where,
           orderBy: { sentAt: 'desc' },
           take: limit,
           skip: offset,
         }),
         prisma.emailDispatchLog.count({ where }),
-        prisma.emailDispatchLog.findMany({
+        (prisma.emailDispatchLog.findMany as any)({
           select: {
             status: true,
             durationMs: true,
@@ -680,12 +680,12 @@ export async function getEnterpriseAuditLogs(options: AuditLogFilterOptions = {}
         }),
       ]);
 
-      const successfulCount = allLogsForMetrics.filter((l) => l.status === 'SUCCESS').length;
-      const failedCount = allLogsForMetrics.filter((l) => l.status === 'FAILED').length;
+      const successfulCount = allLogsForMetrics.filter((l: any) => l.status === 'SUCCESS').length;
+      const failedCount = allLogsForMetrics.filter((l: any) => l.status === 'FAILED').length;
       const totalDispatches = allLogsForMetrics.length;
       const durations = allLogsForMetrics
-        .map((l) => l.durationMs)
-        .filter((d): d is number => typeof d === 'number' && d > 0);
+        .map((l: any) => l.durationMs)
+        .filter((d: any): d is number => typeof d === 'number' && d > 0);
       const avgDurationMs =
         durations.length > 0
           ? Math.round(durations.reduce((acc, curr) => acc + curr, 0) / durations.length)

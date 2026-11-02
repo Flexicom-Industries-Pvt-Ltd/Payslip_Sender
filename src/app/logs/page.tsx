@@ -805,3 +805,4 @@ export default function EnterpriseLogsPage() {
     </DashboardShell>
   );
 }
+
