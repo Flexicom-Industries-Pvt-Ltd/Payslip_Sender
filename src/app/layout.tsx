@@ -17,9 +17,13 @@ export const metadata: Metadata = {
   description:
     'Sterling Distillers Private Limited - Confidential Employee Payslip & Salary Slip Distribution Portal.',
   icons: {
-    icon: '/sterling-favicon.png',
-    shortcut: '/sterling-favicon.png',
-    apple: '/sterling-favicon.png',
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/icon.png', type: 'image/png', sizes: '512x512' },
+      { url: '/sterling-favicon.png', type: 'image/png' },
+    ],
+    shortcut: '/favicon.ico',
+    apple: '/apple-icon.png',
   },
 };
 
