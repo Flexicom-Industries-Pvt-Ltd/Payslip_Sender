@@ -547,7 +547,7 @@ export default function SettingsPage() {
             <input
               type="text"
               disabled={isLocked}
-              placeholder='e.g. Sterling Distillers HR <sales@sterlingdistillers.com>'
+              placeholder='e.g. Sterling Distillers HR or Sterling Distillers HR <hr@domain.com>'
               value={formData.from}
               onChange={(e) => setFormData({ ...formData, from: e.target.value })}
               className={`w-full px-3.5 py-2.5 text-xs rounded-xl transition-all shadow-2xs ${
@@ -557,7 +557,7 @@ export default function SettingsPage() {
               }`}
             />
             <p className="text-[11px] text-slate-400 mt-1">
-              The friendly display name employees will see in their inbox.
+              Friendly sender name employees will see in their inbox (automatically coupled to your verified address).
             </p>
           </div>
 

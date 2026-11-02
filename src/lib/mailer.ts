@@ -127,6 +127,23 @@ export async function getStoredSMTPConfig(): Promise<SMTPStoredConfig> {
  * 2. Writes to safe local fallback file without crashing on read-only environments
  * 3. Updates in-memory process.env
  */
+export function formatFromAddress(from: string | null | undefined, user: string): string {
+  const trimmed = (from || '').trim();
+  if (!trimmed) {
+    return user;
+  }
+  // Already has <email>: e.g. "Tech Team <tech@plascom.in>"
+  if (trimmed.includes('<') && trimmed.includes('>')) {
+    return trimmed;
+  }
+  // Has @ without <>: e.g. "tech@plascom.in"
+  if (trimmed.includes('@')) {
+    return trimmed;
+  }
+  // Just a display name: e.g. "Tech Team" -> "Tech Team <tech@plascom.in>"
+  return `${trimmed} <${user}>`;
+}
+
 export async function saveStoredSMTPConfig(data: {
   host: string;
   port: number;
@@ -143,7 +160,7 @@ export async function saveStoredSMTPConfig(data: {
   const password = data.password !== undefined && data.password !== ''
     ? data.password.trim()
     : (current.password || '');
-  const from = data.from.trim() || user;
+  const from = formatFromAddress(data.from, user);
   const secure = data.secure !== undefined ? Boolean(data.secure) : port === 465;
 
   // 1. Persist to Neon PostgreSQL
@@ -346,7 +363,7 @@ export async function sendPayslipEmail(options: SendPayslipOptions): Promise<Sen
   try {
     const config = await getStoredSMTPConfig();
     const transporter = createTransporter(config);
-    const fromAddress = config.from || config.user;
+    const fromAddress = formatFromAddress(config.from, config.user);
 
     const htmlBody = `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; line-height: 1.6; color: #1e293b; max-width: 600px; padding: 24px; border: 1px solid #e2e8f0; border-radius: 8px;">
@@ -370,6 +387,10 @@ ${escapeHtml(body)}
 
     const info = await transporter.sendMail({
       from: fromAddress,
+      envelope: {
+        from: config.user,
+        to,
+      },
       to, // strictly individual address
       subject,
       text: body,
