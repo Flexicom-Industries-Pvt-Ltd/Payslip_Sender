@@ -11,7 +11,10 @@ import {
   Download,
   X,
   ScrollText,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
+import { useSidebar } from './sidebar-context';
 
 const NAV_ITEMS = [
   {
@@ -43,6 +46,7 @@ const NAV_ITEMS = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { isCollapsed, toggleSidebar } = useSidebar();
   const [isDesktopApp, setIsDesktopApp] = useState(false);
   const [showInstallModal, setShowInstallModal] = useState(false);
 
@@ -64,59 +68,121 @@ export function Sidebar() {
 
   return (
     <>
-      <aside className="w-64 bg-[#221E1E] text-stone-300 flex flex-col shrink-0 border-r border-[#332D2D] select-none">
+      <aside
+        className={`${
+          isCollapsed ? 'w-20' : 'w-64'
+        } bg-[#221E1E] text-stone-300 flex flex-col shrink-0 border-r border-[#332D2D] select-none transition-all duration-300 ease-in-out`}
+      >
         {/* Brand Header */}
-        <div className="h-20 flex items-center px-4 border-b border-[#332D2D]">
-          <div className="w-full bg-white rounded-lg px-2.5 py-1.5 flex items-center justify-center shadow-xs">
-            <img
-              src="/sterling-logo.jpg"
-              alt="Sterling Distillers Private Limited"
-              className="h-9 w-auto max-w-full object-contain"
-            />
-          </div>
+        <div
+          className={`h-20 flex items-center ${
+            isCollapsed ? 'px-2 justify-center' : 'px-4 justify-between'
+          } border-b border-[#332D2D] transition-all`}
+        >
+          {isCollapsed ? (
+            /* Collapsed Small Logo: ONLY the company emblem, NO writing */
+            <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center shadow-xs p-1.5 transition-all">
+              <img
+                src="/sterling-favicon.png"
+                alt="Sterling Distillers Emblem"
+                className="w-full h-full object-contain"
+              />
+            </div>
+          ) : (
+            /* Expanded Full Logo: Emblem + Sterling Distillers Private Limited text */
+            <div className="w-full bg-white rounded-lg px-2.5 py-1.5 flex items-center justify-center shadow-xs transition-all">
+              <img
+                src="/sterling-logo.jpg"
+                alt="Sterling Distillers Private Limited"
+                className="h-9 w-auto max-w-full object-contain"
+              />
+            </div>
+          )}
         </div>
 
         {/* Navigation items */}
-        <div className="flex-1 py-6 px-3 space-y-1 overflow-y-auto">
-          <div className="px-3 mb-2 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">
-            HR Operations
-          </div>
-          {NAV_ITEMS.map((item) => {
-            const isActive = pathname === item.href;
-            const Icon = item.icon;
+        <div className="flex-1 py-6 px-3 flex flex-col justify-between overflow-y-auto">
+          <div className="space-y-1">
+            {isCollapsed ? (
+              <div className="my-2 border-t border-[#332D2D] mx-2" />
+            ) : (
+              <div className="px-3 mb-2 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">
+                HR Operations
+              </div>
+            )}
 
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                  isActive
-                    ? 'bg-[#78B338] text-white shadow-xs font-semibold'
-                    : 'text-stone-300 hover:text-white hover:bg-[#342F2F]'
-                }`}
-              >
-                <Icon
-                  className={`w-4 h-4 shrink-0 ${
-                    isActive ? 'text-white' : 'text-stone-400'
+            {NAV_ITEMS.map((item) => {
+              const isActive = pathname === item.href;
+              const Icon = item.icon;
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  title={isCollapsed ? item.name : undefined}
+                  className={`flex items-center ${
+                    isCollapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'
+                  } rounded-lg text-sm font-medium transition-all ${
+                    isActive
+                      ? 'bg-[#78B338] text-white shadow-xs font-semibold'
+                      : 'text-stone-300 hover:text-white hover:bg-[#342F2F]'
                   }`}
-                />
-                <span>{item.name}</span>
-              </Link>
-            );
-          })}
+                >
+                  <Icon
+                    className={`w-4 h-4 shrink-0 ${
+                      isActive ? 'text-white' : 'text-stone-400'
+                    }`}
+                  />
+                  {!isCollapsed && <span className="truncate">{item.name}</span>}
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* Bottom Collapse Toggle inside Sidebar */}
+          <div className="pt-4 border-t border-[#332D2D] mt-4">
+            <button
+              type="button"
+              onClick={toggleSidebar}
+              title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              className={`w-full flex items-center ${
+                isCollapsed ? 'justify-center px-2 py-2' : 'gap-3 px-3 py-2'
+              } rounded-lg text-xs font-medium text-stone-400 hover:text-white hover:bg-[#342F2F] transition-all cursor-pointer`}
+            >
+              {isCollapsed ? (
+                <PanelLeftOpen className="w-4 h-4 text-stone-400" />
+              ) : (
+                <>
+                  <PanelLeftClose className="w-4 h-4 text-stone-400" />
+                  <span>Collapse Sidebar</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Install Desktop App button at bottom of navbar - ONLY visible in web browser, NEVER in Electron */}
         {!isDesktopApp && (
           <div className="p-3 border-t border-[#332D2D]">
-            <button
-              type="button"
-              onClick={() => setShowInstallModal(true)}
-              className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg bg-[#78B338] hover:bg-[#689F2E] text-white text-xs font-bold shadow-xs transition-all cursor-pointer group"
-            >
-              <Download className="w-4 h-4 transition-transform group-hover:translate-y-0.5" />
-              <span>Install Now</span>
-            </button>
+            {isCollapsed ? (
+              <button
+                type="button"
+                onClick={() => setShowInstallModal(true)}
+                title="Install Desktop App"
+                className="w-full flex items-center justify-center p-2.5 rounded-lg bg-[#78B338] hover:bg-[#689F2E] text-white shadow-xs transition-all cursor-pointer group"
+              >
+                <Download className="w-4 h-4 transition-transform group-hover:translate-y-0.5" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowInstallModal(true)}
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg bg-[#78B338] hover:bg-[#689F2E] text-white text-xs font-bold shadow-xs transition-all cursor-pointer group"
+              >
+                <Download className="w-4 h-4 transition-transform group-hover:translate-y-0.5" />
+                <span>Install Now</span>
+              </button>
+            )}
           </div>
         )}
       </aside>
