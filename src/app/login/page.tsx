@@ -45,8 +45,8 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-white grid grid-cols-1 lg:grid-cols-12 select-none overflow-hidden font-sans">
-      {/* LEFT COLUMN: Clean Minimalist White Authentication Panel */}
-      <div className="lg:col-span-5 bg-white p-8 sm:p-12 lg:p-16 flex flex-col justify-between border-r border-slate-100 relative z-10">
+      {/* LEFT COLUMN: Clean White Minimalist Authentication Panel */}
+      <div className="lg:col-span-5 bg-white p-8 sm:p-12 lg:p-14 flex flex-col justify-between border-r border-slate-200/80 relative z-10">
         {/* Top Company Brand */}
         <div className="flex items-center gap-3">
           <img
@@ -63,7 +63,7 @@ export default function LoginPage() {
               Sign In to HR Portal
             </h1>
             <p className="text-xs text-slate-500 mt-2 leading-relaxed">
-              Enter your administrative passcode to manage employee payslip distribution and payroll records.
+              Confidential employee payslip distribution and payroll records management.
             </p>
           </div>
 
@@ -95,6 +95,7 @@ export default function LoginPage() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
                   tabIndex={-1}
+                  aria-label={showPassword ? 'Hide passcode' : 'Show passcode'}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -134,37 +135,75 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* RIGHT COLUMN: Sterling Distillers Authentic Facility & Heritage Visual */}
-      <div className="lg:col-span-7 hidden lg:block relative bg-stone-900 overflow-hidden">
-        {/* Distillery Photography */}
-        <img
-          src="/distillery-hero.jpg"
-          alt="Sterling Distillers Facility"
-          className="absolute inset-0 w-full h-full object-cover object-center filter brightness-[0.92] contrast-[1.02]"
-        />
+      {/* RIGHT COLUMN: Official Sterling Distillers Plant & Corporate Profile */}
+      <div className="hidden lg:flex lg:col-span-7 bg-[#F8FAF6] p-10 xl:p-14 flex-col justify-between overflow-y-auto">
+        {/* Top Facility Location Header */}
+        <div className="flex items-center justify-between">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-slate-200/90 text-xs font-medium text-slate-700 shadow-2xs">
+            <span className="w-2 h-2 rounded-full bg-[#78B338]" />
+            <span>Purba Bardhaman Plant • West Bengal</span>
+          </div>
+          <span className="text-xs text-slate-500 font-medium">Grain-Based Dedicated Ethanol Plant</span>
+        </div>
 
-        {/* Soft Warm Editorial Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/30" />
-
-        {/* Overlay Content */}
-        <div className="absolute inset-0 p-12 lg:p-16 flex flex-col justify-between text-white z-10">
-          {/* Top Pill */}
-          <div className="flex items-center justify-between">
-            <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-medium bg-black/40 backdrop-blur-md border border-white/15 text-white shadow-xs">
-              <span className="w-2 h-2 rounded-full bg-[#78B338]" />
-              <span>Sterling Distillers Operations</span>
-            </span>
+        {/* Center Showcase */}
+        <div className="my-8 space-y-5 max-w-xl">
+          {/* Authentic Plant Photograph from Official Website */}
+          <div className="relative rounded-2xl overflow-hidden border border-slate-200/90 shadow-sm bg-white">
+            <img
+              src="/sterling-project-1.jpg"
+              alt="Sterling Distillers Dedicated Ethanol Facility, Purba Bardhaman"
+              className="w-full h-64 object-cover object-center"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-slate-950/15 to-transparent flex items-end p-5">
+              <div>
+                <span className="inline-block text-[11px] font-semibold uppercase tracking-wider text-[#9DE04B] mb-1">
+                  Explore Our Plant
+                </span>
+                <p className="text-sm font-medium text-white drop-shadow-sm">
+                  160 KLPD Grain-Based Dedicated Ethanol Plant — Purba Bardhaman, West Bengal
+                </p>
+              </div>
+            </div>
           </div>
 
-          {/* Bottom Editorial Quote */}
-          <div className="max-w-md space-y-2">
-            <p className="text-lg font-serif italic text-white/95 leading-snug drop-shadow-sm">
-              &ldquo;Pioneering excellence in spirits distillation, crafting premium quality through tradition and modern innovation.&rdquo;
-            </p>
-            <p className="text-xs text-white/70 tracking-wide font-sans uppercase">
-              Sterling Distillers Private Limited
+          {/* Authentic Corporate Mission from sterlingdistillers.com */}
+          <div className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-2xs space-y-2.5">
+            <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+              Empowering your future with ETHANOL
+            </h2>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              At Sterling, we manufacture Ethanol, a clean-burning, high-octane renewable fuel that is blended with gasoline. As part of the Ethanol Blended Petrol Programme (EBP) under the Government of India&apos;s National Policy on Biofuels, Sterling Distillers is committed to sustainable bio-energy and reducing India&apos;s carbon footprint.
             </p>
           </div>
+
+          {/* Authentic Products & Co-Products from sterlingdistillers.com */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-white p-3.5 rounded-xl border border-slate-200/90 shadow-2xs">
+              <span className="block text-xs font-bold text-slate-900">Ethanol</span>
+              <span className="block text-[11px] text-slate-500 mt-0.5 leading-snug">
+                Clean-burning, high-octane renewable fuel blended with gasoline
+              </span>
+            </div>
+            <div className="bg-white p-3.5 rounded-xl border border-slate-200/90 shadow-2xs">
+              <span className="block text-xs font-bold text-slate-900">DDGS</span>
+              <span className="block text-[11px] text-slate-500 mt-0.5 leading-snug">
+                Nutrient-rich animal feed co-product from dry milling
+              </span>
+            </div>
+            <div className="bg-white p-3.5 rounded-xl border border-slate-200/90 shadow-2xs">
+              <span className="block text-xs font-bold text-slate-900">CO2</span>
+              <span className="block text-[11px] text-slate-500 mt-0.5 leading-snug">
+                High-purity captured industrial gas for commercial utilization
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Corporate Office Footer */}
+        <div className="flex items-center justify-between text-xs text-slate-400 pt-4 border-t border-slate-200/70">
+          <span>Sterling Distillers Private Limited</span>
+          <span>Salt Lake, Sector-1, Kolkata — 700064</span>
         </div>
       </div>
     </div>
