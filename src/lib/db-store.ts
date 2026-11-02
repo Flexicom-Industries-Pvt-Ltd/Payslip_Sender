@@ -688,9 +688,9 @@ export async function getEnterpriseAuditLogs(options: AuditLogFilterOptions = {}
         .filter((d: any): d is number => typeof d === 'number' && d > 0);
       const avgDurationMs =
         durations.length > 0
-          ? Math.round(durations.reduce((acc, curr) => acc + curr, 0) / durations.length)
+          ? Math.round(durations.reduce((acc: number, curr: number) => acc + curr, 0) / durations.length)
           : 0;
-      const uniqueRecipients = new Set(allLogsForMetrics.map((l) => l.email)).size;
+      const uniqueRecipients = new Set(allLogsForMetrics.map((l: any) => l.email)).size;
 
       return {
         logs,
