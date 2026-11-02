@@ -7,6 +7,7 @@ export async function GET(request: NextRequest) {
     const installerName = 'Sterling-Distillers-Payslip-Portal-Setup-1.0.0.exe';
     const localPath = path.join(process.cwd(), 'dist-electron', installerName);
 
+    // If running in local environment where built installer file is present
     if (fs.existsSync(/*turbopackIgnore: true*/ localPath)) {
       const fileBuffer = fs.readFileSync(/*turbopackIgnore: true*/ localPath);
       return new NextResponse(fileBuffer, {
@@ -19,10 +20,11 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const githubReleaseUrl =
-      'https://github.com/Flexicom-Industries-Pvt-Ltd/Payslip_Sender/releases/latest/download/Sterling-Distillers-Payslip-Portal-Setup-1.0.0.exe';
+    // Direct GitHub release binary URL (hosted on high-speed CDN)
+    const releaseDownloadUrl =
+      'https://github.com/Flexicom-Industries-Pvt-Ltd/Payslip_Sender/releases/download/v1.0.0/Sterling-Distillers-Payslip-Portal-Setup-1.0.0.exe';
 
-    return NextResponse.redirect(githubReleaseUrl, { status: 307 });
+    return NextResponse.redirect(releaseDownloadUrl, { status: 302 });
   } catch (err: any) {
     return NextResponse.json(
       { success: false, error: err.message || 'Unable to download installer' },
