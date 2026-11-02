@@ -65,3 +65,4 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
 export function useSidebar() {
   return useContext(SidebarContext);
 }
+
