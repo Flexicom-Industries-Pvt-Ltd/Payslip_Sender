@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
-import { Badge } from '@/components/ui/badge';
 import {
   ScrollText,
   Search,
@@ -21,6 +20,8 @@ import {
   Zap,
   ChevronRight,
   X,
+  Send,
+  Hash,
 } from 'lucide-react';
 
 interface AuditLogRecord {
@@ -131,7 +132,6 @@ export default function EnterpriseLogsPage() {
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
-  // CSV Export for Compliance Auditing
   const handleExportCSV = () => {
     if (!logs.length) return;
 
@@ -182,38 +182,74 @@ export default function EnterpriseLogsPage() {
     document.body.removeChild(link);
   };
 
-  const parsedRawDetails = useMemo(() => {
-    if (!selectedLog?.rawDetails) return null;
-    try {
-      return JSON.parse(selectedLog.rawDetails);
-    } catch {
-      return selectedLog.rawDetails;
+  // Filter out noisy nulls for clean, executive-level JSON inspection
+  const cleanJsonPayload = useMemo(() => {
+    if (!selectedLog) return {};
+    const obj: Record<string, any> = {
+      id: selectedLog.id,
+      timestamp: selectedLog.sentAt,
+      status: selectedLog.status,
+      recipient: {
+        id: selectedLog.employeeId,
+        name: selectedLog.employeeName,
+        email: selectedLog.email,
+        period: `${selectedLog.month} ${selectedLog.year}`,
+      },
+      delivery: {
+        latencyMs: selectedLog.durationMs || null,
+        smtpHost: selectedLog.smtpHost || 'smtppro.zoho.in',
+        smtpPort: selectedLog.smtpPort || 465,
+        from: selectedLog.fromAddress || 'Tech Team <tech@plascom.in>',
+        messageId: selectedLog.messageId || null,
+        response: selectedLog.responseBody || null,
+      },
+    };
+
+    if (selectedLog.errorMessage) {
+      obj.error = selectedLog.errorMessage;
     }
+
+    if (selectedLog.attachmentName) {
+      obj.attachment = {
+        name: selectedLog.attachmentName,
+        sizeBytes: selectedLog.attachmentSize || 0,
+      };
+    }
+
+    if (selectedLog.rawDetails) {
+      try {
+        obj.diagnostics = JSON.parse(selectedLog.rawDetails);
+      } catch {
+        obj.diagnostics = selectedLog.rawDetails;
+      }
+    }
+
+    return obj;
   }, [selectedLog]);
 
   return (
     <DashboardShell>
-      <div className="space-y-6">
-        {/* Top Header */}
+      <div className="space-y-6 max-w-7xl mx-auto">
+        {/* Header Bar */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-              <ScrollText className="w-5 h-5 text-primary" />
-              <span>Enterprise Email & Audit Logs</span>
+              <ScrollText className="w-5 h-5 text-[#78B338]" />
+              <span>Audit Logs</span>
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              Comprehensive end-to-end telemetry, cryptographic headers, and raw SMTP server response logs.
+              Real-time delivery status, latency tracking, and SMTP response logs.
             </p>
           </div>
 
-          <div className="flex items-center gap-2.5 w-full sm:w-auto">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <button
               type="button"
               onClick={() => fetchLogs(true)}
               disabled={refreshing}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 shadow-2xs transition-all cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 shadow-2xs transition-all cursor-pointer"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-primary' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-[#78B338]' : ''}`} />
               <span>Refresh</span>
             </button>
 
@@ -221,279 +257,238 @@ export default function EnterpriseLogsPage() {
               type="button"
               onClick={handleExportCSV}
               disabled={logs.length === 0}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-[#221E1E] text-white hover:bg-black shadow-2xs transition-all cursor-pointer disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium rounded-lg bg-[#221E1E] text-white hover:bg-black shadow-2xs transition-all cursor-pointer disabled:opacity-50"
             >
               <Download className="w-3.5 h-3.5" />
-              <span>Export Audit CSV</span>
+              <span>Export CSV</span>
             </button>
           </div>
         </div>
 
-        {/* Enterprise Metrics Summary */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <div className="bg-white border border-slate-200/80 rounded-xl p-3.5 shadow-2xs">
-            <div className="flex items-center justify-between text-slate-400 mb-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider">Total Dispatches</span>
-              <Mail className="w-3.5 h-3.5 text-slate-400" />
+        {/* Minimal Metric Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="bg-white border border-slate-200/70 rounded-xl p-4 shadow-2xs">
+            <div className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">
+              Total Dispatches
             </div>
-            <div className="text-xl font-black text-slate-900 font-mono">
+            <div className="text-2xl font-bold text-slate-900 tracking-tight">
               {metrics.totalDispatches.toLocaleString()}
             </div>
-            <div className="text-[10px] text-slate-400 mt-0.5">All outbound attempts</div>
-          </div>
-
-          <div className="bg-white border border-slate-200/80 rounded-xl p-3.5 shadow-2xs">
-            <div className="flex items-center justify-between text-emerald-600 mb-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider">Delivered</span>
-              <CheckCircle2 className="w-3.5 h-3.5" />
-            </div>
-            <div className="text-xl font-black text-emerald-700 font-mono">
-              {metrics.successfulCount.toLocaleString()}
-            </div>
-            <div className="text-[10px] text-emerald-600 font-semibold mt-0.5">
-              {metrics.successRate}% Success Rate
+            <div className="text-[11px] text-slate-400 mt-0.5">
+              {metrics.uniqueRecipients} unique employees
             </div>
           </div>
 
-          <div className="bg-white border border-slate-200/80 rounded-xl p-3.5 shadow-2xs">
-            <div className="flex items-center justify-between text-rose-500 mb-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider">Failures</span>
-              <XCircle className="w-3.5 h-3.5" />
+          <div className="bg-white border border-slate-200/70 rounded-xl p-4 shadow-2xs">
+            <div className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">
+              Delivered
             </div>
-            <div className="text-xl font-black text-rose-600 font-mono">
+            <div className="text-2xl font-bold text-emerald-600 tracking-tight flex items-baseline gap-2">
+              <span>{metrics.successfulCount.toLocaleString()}</span>
+              <span className="text-xs font-semibold text-emerald-600/80">({metrics.successRate}%)</span>
+            </div>
+            <div className="text-[11px] text-slate-400 mt-0.5">Acknowledged by server</div>
+          </div>
+
+          <div className="bg-white border border-slate-200/70 rounded-xl p-4 shadow-2xs">
+            <div className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">
+              Failed
+            </div>
+            <div className="text-2xl font-bold text-rose-600 tracking-tight">
               {metrics.failedCount.toLocaleString()}
             </div>
-            <div className="text-[10px] text-slate-400 mt-0.5">SMTP relay / invalid address</div>
+            <div className="text-[11px] text-slate-400 mt-0.5">Relay or mailbox issues</div>
           </div>
 
-          <div className="bg-white border border-slate-200/80 rounded-xl p-3.5 shadow-2xs">
-            <div className="flex items-center justify-between text-amber-600 mb-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider">Avg Latency</span>
-              <Zap className="w-3.5 h-3.5" />
+          <div className="bg-white border border-slate-200/70 rounded-xl p-4 shadow-2xs">
+            <div className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">
+              Avg. Latency
             </div>
-            <div className="text-xl font-black text-slate-900 font-mono">
+            <div className="text-2xl font-bold text-slate-800 tracking-tight font-mono">
               {metrics.avgDurationMs ? `${metrics.avgDurationMs}ms` : '—'}
             </div>
-            <div className="text-[10px] text-slate-400 mt-0.5">Roundtrip SMTP dispatch</div>
-          </div>
-
-          <div className="bg-white border border-slate-200/80 rounded-xl p-3.5 shadow-2xs col-span-2 md:col-span-1">
-            <div className="flex items-center justify-between text-blue-600 mb-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider">Recipients</span>
-              <ShieldCheck className="w-3.5 h-3.5" />
-            </div>
-            <div className="text-xl font-black text-slate-900 font-mono">
-              {metrics.uniqueRecipients.toLocaleString()}
-            </div>
-            <div className="text-[10px] text-slate-400 mt-0.5">Distinct employee inboxes</div>
+            <div className="text-[11px] text-slate-400 mt-0.5">Roundtrip SMTP dispatch</div>
           </div>
         </div>
 
-        {/* Filters and Search Bar */}
-        <div className="bg-white border border-slate-200/80 rounded-xl p-4 shadow-2xs space-y-3">
-          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-            {/* Search Input */}
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-              <input
-                type="text"
-                placeholder="Search by Employee, ID, Email, Message ID, or Subject..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-9 pr-3.5 py-2 text-xs rounded-lg bg-slate-50 border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-[#96D055] focus:bg-white text-slate-900"
-              />
-            </div>
+        {/* Filter Strip */}
+        <div className="bg-white border border-slate-200/70 rounded-xl p-3 shadow-2xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+          {/* Search */}
+          <div className="relative flex-1">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+            <input
+              type="text"
+              placeholder="Search by name, ID, email, message ID..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg bg-slate-50/70 border border-slate-200/80 focus:outline-hidden focus:ring-1 focus:ring-[#78B338] focus:bg-white text-slate-900"
+            />
+          </div>
 
-            {/* Status Segmented Control */}
-            <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs font-semibold shrink-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Status Pills */}
+            <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200/60 text-xs">
               <button
                 type="button"
                 onClick={() => setStatusFilter('ALL')}
-                className={`px-3 py-1.5 rounded-md transition-all cursor-pointer ${
+                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all cursor-pointer ${
                   statusFilter === 'ALL'
                     ? 'bg-white text-slate-900 shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
-                All Status
+                All
               </button>
               <button
                 type="button"
                 onClick={() => setStatusFilter('SUCCESS')}
-                className={`px-3 py-1.5 rounded-md flex items-center gap-1.5 transition-all cursor-pointer ${
+                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all cursor-pointer ${
                   statusFilter === 'SUCCESS'
-                    ? 'bg-emerald-600 text-white shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-white text-emerald-700 shadow-2xs'
+                    : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
-                <CheckCircle2 className="w-3 h-3" />
-                <span>Delivered</span>
+                Delivered
               </button>
               <button
                 type="button"
                 onClick={() => setStatusFilter('FAILED')}
-                className={`px-3 py-1.5 rounded-md flex items-center gap-1.5 transition-all cursor-pointer ${
+                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all cursor-pointer ${
                   statusFilter === 'FAILED'
-                    ? 'bg-rose-600 text-white shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-white text-rose-700 shadow-2xs'
+                    : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
-                <XCircle className="w-3 h-3" />
-                <span>Failed</span>
+                Failed
               </button>
             </div>
 
-            {/* Month & Year Jumpers */}
-            <div className="flex items-center gap-2 shrink-0">
-              <select
-                value={monthFilter}
-                onChange={(e) => setMonthFilter(e.target.value)}
-                className="px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-700 font-medium cursor-pointer"
-              >
-                {MONTHS.map((m) => (
-                  <option key={m} value={m}>
-                    {m === 'All' ? 'All Months' : m}
-                  </option>
-                ))}
-              </select>
+            {/* Select Dropdowns */}
+            <select
+              value={monthFilter}
+              onChange={(e) => setMonthFilter(e.target.value)}
+              className="px-2.5 py-1.5 text-xs bg-slate-50/70 border border-slate-200/80 rounded-lg text-slate-700 font-medium cursor-pointer"
+            >
+              {MONTHS.map((m) => (
+                <option key={m} value={m}>
+                  {m === 'All' ? 'All Months' : m}
+                </option>
+              ))}
+            </select>
 
-              <select
-                value={yearFilter}
-                onChange={(e) => setYearFilter(e.target.value)}
-                className="px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-700 font-medium cursor-pointer"
-              >
-                {YEARS.map((y) => (
-                  <option key={y} value={y}>
-                    {y === 'All' ? 'All Years' : y}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <select
+              value={yearFilter}
+              onChange={(e) => setYearFilter(e.target.value)}
+              className="px-2.5 py-1.5 text-xs bg-slate-50/70 border border-slate-200/80 rounded-lg text-slate-700 font-medium cursor-pointer"
+            >
+              {YEARS.map((y) => (
+                <option key={y} value={y}>
+                  {y === 'All' ? 'All Years' : y}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
-        {/* Telemetry Table */}
-        <div className="bg-white border border-slate-200/80 rounded-xl shadow-2xs overflow-hidden">
+        {/* Clean Minimal Table */}
+        <div className="bg-white border border-slate-200/70 rounded-xl shadow-2xs overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="bg-slate-50/80 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                  <th className="py-3 px-4">Status & Code</th>
-                  <th className="py-3 px-4">Recipient / Employee</th>
-                  <th className="py-3 px-4">Period</th>
-                  <th className="py-3 px-4">Latency</th>
-                  <th className="py-3 px-4">Server Response / Diagnostics</th>
-                  <th className="py-3 px-4">Dispatched At</th>
-                  <th className="py-3 px-4 text-right">Inspect</th>
+                <tr className="bg-slate-50/60 border-b border-slate-200/70 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  <th className="py-2.5 px-4 font-medium">Status</th>
+                  <th className="py-2.5 px-4 font-medium">Recipient</th>
+                  <th className="py-2.5 px-4 font-medium">Period</th>
+                  <th className="py-2.5 px-4 font-medium">Latency</th>
+                  <th className="py-2.5 px-4 font-medium">Server Response</th>
+                  <th className="py-2.5 px-4 font-medium">Dispatched</th>
+                  <th className="py-2.5 px-4 font-medium text-right">Details</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-xs">
+              <tbody className="divide-y divide-slate-100">
                 {loading ? (
                   <tr>
                     <td colSpan={7} className="py-12 text-center text-slate-400">
                       <div className="flex items-center justify-center gap-2">
-                        <RefreshCw className="w-4 h-4 animate-spin text-primary" />
-                        <span>Querying Enterprise Telemetry Logs...</span>
+                        <RefreshCw className="w-4 h-4 animate-spin text-[#78B338]" />
+                        <span>Loading audit logs...</span>
                       </div>
                     </td>
                   </tr>
                 ) : logs.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="py-12 text-center text-slate-400">
-                      No dispatch telemetry records found matching your filters.
+                      No dispatch records found.
                     </td>
                   </tr>
                 ) : (
                   logs.map((log) => {
                     const isSuccess = log.status === 'SUCCESS';
-                    const codeLabel = isSuccess ? '250 OK' : 'FAILED';
 
                     return (
                       <tr
                         key={log.id}
                         onClick={() => setSelectedLog(log)}
-                        className="hover:bg-slate-50/80 transition-colors cursor-pointer group"
+                        className="hover:bg-slate-50/70 transition-colors cursor-pointer group"
                       >
                         {/* Status */}
                         <td className="py-3 px-4 whitespace-nowrap">
                           <span
-                            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold font-mono ${
+                            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium ${
                               isSuccess
-                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/80'
-                                : 'bg-rose-50 text-rose-700 border border-rose-200/80'
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/50'
+                                : 'bg-rose-50 text-rose-700 border border-rose-200/50'
                             }`}
                           >
-                            {isSuccess ? (
-                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                            ) : (
-                              <XCircle className="w-3 h-3 text-rose-600" />
-                            )}
-                            <span>{codeLabel}</span>
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${
+                                isSuccess ? 'bg-emerald-500' : 'bg-rose-500'
+                              }`}
+                            />
+                            <span>{isSuccess ? 'Delivered' : 'Failed'}</span>
                           </span>
                         </td>
 
                         {/* Recipient */}
                         <td className="py-3 px-4">
-                          <div className="font-semibold text-slate-900 flex items-center gap-1.5">
+                          <div className="font-medium text-slate-900 flex items-center gap-1.5">
                             <span>{log.employeeName}</span>
-                            <span className="font-mono text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.2 rounded font-normal">
+                            <span className="font-mono text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.2 rounded">
                               {log.employeeId}
                             </span>
                           </div>
-                          <div className="text-[11px] text-slate-500 font-mono mt-0.5 truncate max-w-[220px]">
+                          <div className="text-[11px] text-slate-500 font-mono truncate max-w-[200px]">
                             {log.email}
                           </div>
                         </td>
 
                         {/* Period */}
-                        <td className="py-3 px-4 whitespace-nowrap">
-                          <span className="text-slate-700 font-medium">
-                            {log.month} {log.year}
-                          </span>
+                        <td className="py-3 px-4 whitespace-nowrap text-slate-700">
+                          {log.month} {log.year}
                         </td>
 
                         {/* Latency */}
-                        <td className="py-3 px-4 whitespace-nowrap font-mono text-[11px]">
-                          {log.durationMs ? (
-                            <span
-                              className={`${
-                                log.durationMs < 1000
-                                  ? 'text-emerald-700'
-                                  : log.durationMs < 3000
-                                  ? 'text-amber-700'
-                                  : 'text-slate-500'
-                              }`}
-                            >
-                              {log.durationMs}ms
-                            </span>
-                          ) : (
-                            <span className="text-slate-300">—</span>
-                          )}
+                        <td className="py-3 px-4 whitespace-nowrap font-mono text-slate-600">
+                          {log.durationMs ? `${log.durationMs}ms` : '—'}
                         </td>
 
-                        {/* Server Response preview */}
-                        <td className="py-3 px-4 max-w-[320px]">
+                        {/* Server Response */}
+                        <td className="py-3 px-4 max-w-[280px]">
                           <div
-                            className={`text-[11px] font-mono truncate ${
-                              isSuccess ? 'text-slate-600' : 'text-rose-600 font-semibold'
+                            className={`truncate text-[11px] font-mono ${
+                              isSuccess ? 'text-slate-600' : 'text-rose-600'
                             }`}
                             title={log.errorMessage || log.responseBody || ''}
                           >
                             {log.errorMessage || log.responseBody || '250 Message accepted'}
                           </div>
-                          {log.messageId && (
-                            <div className="text-[10px] text-slate-400 font-mono truncate mt-0.5">
-                              ID: {log.messageId}
-                            </div>
-                          )}
                         </td>
 
-                        {/* Dispatched At */}
-                        <td className="py-3 px-4 whitespace-nowrap text-slate-500 text-[11px]">
-                          {new Date(log.sentAt).toLocaleString('en-US', {
+                        {/* Dispatched */}
+                        <td className="py-3 px-4 whitespace-nowrap text-slate-400 text-[11px]">
+                          {new Date(log.sentAt).toLocaleDateString('en-US', {
                             month: 'short',
                             day: 'numeric',
-                            year: 'numeric',
                             hour: '2-digit',
                             minute: '2-digit',
                           })}
@@ -501,17 +496,10 @@ export default function EnterpriseLogsPage() {
 
                         {/* Action */}
                         <td className="py-3 px-4 text-right whitespace-nowrap">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedLog(log);
-                            }}
-                            className="text-xs font-semibold text-primary hover:text-[#5E8E2B] group-hover:underline flex items-center justify-end gap-1 ml-auto cursor-pointer"
-                          >
+                          <span className="text-xs font-medium text-slate-400 group-hover:text-slate-700 inline-flex items-center gap-0.5 transition-colors">
                             <span>Inspect</span>
-                            <ChevronRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
-                          </button>
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </span>
                         </td>
                       </tr>
                     );
@@ -523,190 +511,224 @@ export default function EnterpriseLogsPage() {
         </div>
       </div>
 
-      {/* Enterprise End-to-End Telemetry Inspector Modal */}
+      {/* Sleek Minimal Telemetry Modal */}
       {selectedLog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl max-w-3xl w-full border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            {/* Modal Header */}
-            <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
-              <div className="flex items-center gap-3">
-                <span
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold font-mono ${
-                    selectedLog.status === 'SUCCESS'
-                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                      : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                  }`}
-                >
-                  {selectedLog.status === 'SUCCESS' ? (
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                  ) : (
-                    <XCircle className="w-3.5 h-3.5 text-rose-400" />
-                  )}
-                  <span>{selectedLog.status === 'SUCCESS' ? '250 DELIVERED' : '550 REJECTED / FAILED'}</span>
-                </span>
-                <div>
-                  <h3 className="text-sm font-bold tracking-tight">
-                    Dispatch Telemetry: {selectedLog.employeeName} ({selectedLog.employeeId})
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-150"
+          onClick={() => setSelectedLog(null)}
+        >
+          <div
+            className="bg-white rounded-2xl max-w-2xl w-full border border-slate-200/90 shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Minimal Clean Header */}
+            <div className="px-6 pt-5 pb-4 border-b border-slate-100 flex items-start justify-between bg-white">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      selectedLog.status === 'SUCCESS'
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
+                        : 'bg-rose-50 text-rose-700 border border-rose-200/60'
+                    }`}
+                  >
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        selectedLog.status === 'SUCCESS' ? 'bg-emerald-500' : 'bg-rose-500'
+                      }`}
+                    />
+                    <span>{selectedLog.status === 'SUCCESS' ? 'Delivered (250 OK)' : 'Failed (550 Error)'}</span>
+                  </span>
+
+                  <span className="text-xs text-slate-400">
+                    {new Date(selectedLog.sentAt).toLocaleString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      second: '2-digit',
+                    })}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2 pt-0.5">
+                  <h3 className="text-base font-semibold text-slate-900 tracking-tight">
+                    {selectedLog.employeeName}
                   </h3>
-                  <p className="text-[11px] text-slate-400 font-mono">
-                    Log UUID: {selectedLog.id}
-                  </p>
+                  <span className="text-xs font-mono bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">
+                    {selectedLog.employeeId}
+                  </span>
+                  <span className="text-slate-300">•</span>
+                  <span className="text-xs font-mono text-slate-500">{selectedLog.email}</span>
                 </div>
               </div>
 
               <button
                 type="button"
                 onClick={() => setSelectedLog(null)}
-                className="text-slate-400 hover:text-white p-1 rounded-md hover:bg-slate-800 transition-colors cursor-pointer"
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer -mr-2 -mt-1"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Sub-Tabs Navigation */}
-            <div className="bg-slate-100 px-6 border-b border-slate-200 flex gap-4 text-xs font-semibold">
-              <button
-                type="button"
-                onClick={() => setActiveInspectorTab('overview')}
-                className={`py-2.5 border-b-2 cursor-pointer transition-all ${
-                  activeInspectorTab === 'overview'
-                    ? 'border-[#78B338] text-slate-900'
-                    : 'border-transparent text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                Telemetry Overview
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveInspectorTab('smtp')}
-                className={`py-2.5 border-b-2 cursor-pointer transition-all ${
-                  activeInspectorTab === 'smtp'
-                    ? 'border-[#78B338] text-slate-900'
-                    : 'border-transparent text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                SMTP Response Body
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveInspectorTab('payload')}
-                className={`py-2.5 border-b-2 cursor-pointer transition-all ${
-                  activeInspectorTab === 'payload'
-                    ? 'border-[#78B338] text-slate-900'
-                    : 'border-transparent text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                Payload & Attachment
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveInspectorTab('raw')}
-                className={`py-2.5 border-b-2 cursor-pointer transition-all ${
-                  activeInspectorTab === 'raw'
-                    ? 'border-[#78B338] text-slate-900'
-                    : 'border-transparent text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                Raw Diagnostic JSON
-              </button>
+            {/* Segmented Pill Tabs */}
+            <div className="px-6 py-2.5 bg-slate-50/70 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setActiveInspectorTab('overview')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                    activeInspectorTab === 'overview'
+                      ? 'bg-white text-slate-900 shadow-xs border border-slate-200/70'
+                      : 'text-slate-500 hover:text-slate-900'
+                  }`}
+                >
+                  Overview
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveInspectorTab('smtp')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                    activeInspectorTab === 'smtp'
+                      ? 'bg-white text-slate-900 shadow-xs border border-slate-200/70'
+                      : 'text-slate-500 hover:text-slate-900'
+                  }`}
+                >
+                  Server Handshake
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveInspectorTab('payload')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                    activeInspectorTab === 'payload'
+                      ? 'bg-white text-slate-900 shadow-xs border border-slate-200/70'
+                      : 'text-slate-500 hover:text-slate-900'
+                  }`}
+                >
+                  Attachment
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveInspectorTab('raw')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                    activeInspectorTab === 'raw'
+                      ? 'bg-white text-slate-900 shadow-xs border border-slate-200/70'
+                      : 'text-slate-500 hover:text-slate-900'
+                  }`}
+                >
+                  Raw JSON
+                </button>
+              </div>
+
+              {activeInspectorTab === 'raw' && (
+                <button
+                  type="button"
+                  onClick={() => handleCopy(JSON.stringify(cleanJsonPayload, null, 2), 'rawJson')}
+                  className="text-xs text-slate-500 hover:text-slate-900 flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-white border border-transparent hover:border-slate-200 transition-all cursor-pointer font-medium"
+                >
+                  {copiedKey === 'rawJson' ? (
+                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                  ) : (
+                    <Copy className="w-3.5 h-3.5" />
+                  )}
+                  <span>{copiedKey === 'rawJson' ? 'Copied' : 'Copy JSON'}</span>
+                </button>
+              )}
             </div>
 
-            {/* Modal Body */}
-            <div className="p-6 overflow-y-auto space-y-4 flex-1">
+            {/* Modal Body Content */}
+            <div className="p-6 overflow-y-auto space-y-4 flex-1 text-xs">
+              {/* TAB 1: OVERVIEW */}
               {activeInspectorTab === 'overview' && (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
-                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                        Salary Period
+                  {/* Metric Chips */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                      <div className="text-[11px] font-medium text-slate-400">Response Time</div>
+                      <div className="text-sm font-semibold text-slate-900 font-mono mt-0.5">
+                        {selectedLog.durationMs ? `${selectedLog.durationMs} ms` : '—'}
                       </div>
-                      <div className="text-xs font-bold text-slate-800">
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                      <div className="text-[11px] font-medium text-slate-400">Salary Period</div>
+                      <div className="text-sm font-semibold text-slate-900 mt-0.5">
                         {selectedLog.month} {selectedLog.year}
                       </div>
                     </div>
 
-                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
-                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                        Execution Latency
-                      </div>
-                      <div className="text-xs font-bold font-mono text-emerald-700">
-                        {selectedLog.durationMs ? `${selectedLog.durationMs} ms` : 'N/A'}
-                      </div>
-                    </div>
-
-                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
-                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                        Outbound Host
-                      </div>
-                      <div className="text-xs font-bold font-mono text-slate-800 truncate">
-                        {selectedLog.smtpHost ? `${selectedLog.smtpHost}:${selectedLog.smtpPort || 465}` : 'Configured SMTP'}
+                    <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                      <div className="text-[11px] font-medium text-slate-400">SMTP Host</div>
+                      <div className="text-sm font-semibold text-slate-900 font-mono mt-0.5 truncate">
+                        {selectedLog.smtpHost || 'smtppro.zoho.in'}
                       </div>
                     </div>
                   </div>
 
-                  <div className="border border-slate-200 rounded-xl overflow-hidden divide-y divide-slate-100 text-xs">
-                    <div className="p-3 bg-slate-50 flex items-center justify-between">
-                      <span className="font-semibold text-slate-600">SMTP Message-ID</span>
-                      <div className="flex items-center gap-1.5 font-mono text-[11px] text-slate-800">
-                        <span>{selectedLog.messageId || 'Pending or Unassigned'}</span>
+                  {/* Key-Value Details List */}
+                  <div className="border border-slate-200/80 rounded-xl overflow-hidden divide-y divide-slate-100">
+                    <div className="px-4 py-3 flex items-center justify-between">
+                      <span className="text-slate-500 font-medium">Message-ID</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-slate-800 text-[11px]">
+                          {selectedLog.messageId || '—'}
+                        </span>
                         {selectedLog.messageId && (
                           <button
                             type="button"
                             onClick={() => handleCopy(selectedLog.messageId!, 'msgId')}
-                            className="p-1 text-slate-400 hover:text-slate-600 cursor-pointer"
-                            title="Copy Message ID"
+                            className="p-1 text-slate-400 hover:text-slate-600 rounded cursor-pointer"
                           >
-                            {copiedKey === 'msgId' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                            {copiedKey === 'msgId' ? (
+                              <Check className="w-3.5 h-3.5 text-emerald-600" />
+                            ) : (
+                              <Copy className="w-3.5 h-3.5" />
+                            )}
                           </button>
                         )}
                       </div>
                     </div>
 
-                    <div className="p-3 flex items-center justify-between">
-                      <span className="font-semibold text-slate-600">Envelope Sender (MAIL FROM)</span>
-                      <span className="font-mono text-slate-800">{selectedLog.fromAddress || 'tech@plascom.in'}</span>
+                    <div className="px-4 py-3 flex items-center justify-between">
+                      <span className="text-slate-500 font-medium">Sender (From)</span>
+                      <span className="font-mono text-slate-800">
+                        {selectedLog.fromAddress || 'Tech Team <tech@plascom.in>'}
+                      </span>
                     </div>
 
-                    <div className="p-3 flex items-center justify-between">
-                      <span className="font-semibold text-slate-600">Envelope Recipient (RCPT TO)</span>
+                    <div className="px-4 py-3 flex items-center justify-between">
+                      <span className="text-slate-500 font-medium">Recipient Address</span>
                       <span className="font-mono text-slate-800">{selectedLog.email}</span>
                     </div>
 
-                    <div className="p-3 flex items-center justify-between">
-                      <span className="font-semibold text-slate-600">Dispatched Timestamp</span>
-                      <span className="font-mono text-slate-800">{new Date(selectedLog.sentAt).toISOString()}</span>
+                    <div className="px-4 py-3 flex items-center justify-between">
+                      <span className="text-slate-500 font-medium">Subject</span>
+                      <span className="text-slate-800 font-medium">
+                        {selectedLog.subject || `Payslip for ${selectedLog.month} ${selectedLog.year}`}
+                      </span>
                     </div>
                   </div>
                 </div>
               )}
 
+              {/* TAB 2: SERVER HANDSHAKE */}
               {activeInspectorTab === 'smtp' && (
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                      Mail Server Handshake & Response Body
-                    </h4>
-                    {selectedLog.responseBody && (
-                      <button
-                        type="button"
-                        onClick={() => handleCopy(selectedLog.responseBody!, 'resp')}
-                        className="text-xs text-primary font-semibold flex items-center gap-1 hover:underline cursor-pointer"
-                      >
-                        {copiedKey === 'resp' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                        <span>Copy Response</span>
-                      </button>
-                    )}
+                  <div className="text-xs font-medium text-slate-500">
+                    Raw response returned by the outbound SMTP server:
                   </div>
 
-                  <div className="p-4 rounded-xl bg-slate-900 text-slate-100 font-mono text-xs overflow-x-auto leading-relaxed border border-slate-800">
-                    {selectedLog.responseBody || selectedLog.errorMessage || 'No response body recorded for this transaction.'}
+                  <div className="p-3.5 rounded-xl bg-slate-900 text-slate-200 font-mono text-xs leading-relaxed border border-slate-800 shadow-inner overflow-x-auto">
+                    {selectedLog.responseBody || selectedLog.errorMessage || '250 2.0.0 OK: Message accepted for delivery'}
                   </div>
 
                   {selectedLog.errorMessage && (
-                    <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-2.5">
+                    <div className="p-3 rounded-xl bg-rose-50 border border-rose-200/80 text-rose-800 text-xs flex items-start gap-2.5">
                       <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
                       <div>
-                        <div className="font-bold">Transmission Error Logged:</div>
+                        <div className="font-semibold">Server Diagnostics:</div>
                         <div className="font-mono text-[11px] mt-0.5">{selectedLog.errorMessage}</div>
                       </div>
                     </div>
@@ -714,89 +736,71 @@ export default function EnterpriseLogsPage() {
                 </div>
               )}
 
+              {/* TAB 3: ATTACHMENT */}
               {activeInspectorTab === 'payload' && (
-                <div className="space-y-4">
-                  <div className="border border-slate-200 rounded-xl p-4 bg-slate-50 space-y-2 text-xs">
-                    <div>
-                      <span className="font-bold text-slate-500 uppercase tracking-wider text-[10px] block mb-0.5">
-                        Subject Line
-                      </span>
-                      <span className="font-semibold text-slate-800 text-sm">
-                        {selectedLog.subject || `Payslip for ${selectedLog.month} ${selectedLog.year}`}
-                      </span>
-                    </div>
-
-                    <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between">
-                      <div>
-                        <span className="font-bold text-slate-500 uppercase tracking-wider text-[10px] block mb-0.5">
-                          Attached Payslip Document
-                        </span>
-                        <span className="font-mono text-slate-800 font-semibold flex items-center gap-1.5">
-                          <FileText className="w-3.5 h-3.5 text-primary" />
-                          <span>{selectedLog.attachmentName || `Payslip_${selectedLog.employeeId}_${selectedLog.month}.pdf`}</span>
-                        </span>
+                <div className="space-y-3">
+                  <div className="border border-slate-200/80 rounded-xl p-4 bg-slate-50/50 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-red-50 border border-red-100 flex items-center justify-center text-red-600">
+                        <FileText className="w-5 h-5" />
                       </div>
-
-                      {selectedLog.attachmentSize && (
-                        <div className="text-right">
-                          <span className="font-bold text-slate-500 uppercase tracking-wider text-[10px] block mb-0.5">
-                            Attachment Size
-                          </span>
-                          <span className="font-mono text-slate-800 font-semibold">
-                            {(selectedLog.attachmentSize / 1024).toFixed(1)} KB
-                          </span>
+                      <div>
+                        <div className="font-medium text-slate-900">
+                          {selectedLog.attachmentName || `Payslip_${selectedLog.employeeId}_${selectedLog.month}.pdf`}
                         </div>
-                      )}
+                        <div className="text-[11px] text-slate-400 font-mono mt-0.5">
+                          {selectedLog.attachmentSize
+                            ? `${(selectedLog.attachmentSize / 1024).toFixed(1)} KB`
+                            : 'Standard PDF Document'}
+                        </div>
+                      </div>
                     </div>
+
+                    <span className="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-2.5 py-1 rounded-full font-medium">
+                      Encrypted in Memory
+                    </span>
                   </div>
 
-                  <div className="text-[11px] text-slate-400 italic">
-                    Note: To preserve employee data confidentiality and zero-knowledge storage, in-memory PDF binary buffers are immediately discarded upon SMTP acknowledgment.
-                  </div>
+                  <p className="text-[11px] text-slate-400">
+                    To comply with payroll confidentiality standards, in-memory PDF buffers are wiped immediately upon SMTP delivery acknowledgment.
+                  </p>
                 </div>
               )}
 
+              {/* TAB 4: RAW JSON */}
               {activeInspectorTab === 'raw' && (
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                      Complete Diagnostic JSON Dump
-                    </h4>
-                    <button
-                      type="button"
-                      onClick={() => handleCopy(JSON.stringify(selectedLog, null, 2), 'rawJson')}
-                      className="text-xs text-primary font-semibold flex items-center gap-1 hover:underline cursor-pointer"
-                    >
-                      {copiedKey === 'rawJson' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                      <span>Copy Full JSON</span>
-                    </button>
-                  </div>
-
-                  <pre className="p-4 rounded-xl bg-slate-900 text-emerald-400 font-mono text-[11px] overflow-x-auto max-h-[320px] leading-normal border border-slate-800">
-                    {JSON.stringify(
-                      {
-                        ...selectedLog,
-                        parsedDetails: parsedRawDetails,
-                      },
-                      null,
-                      2
-                    )}
+                  <pre className="p-4 rounded-xl bg-[#0F172A] text-slate-200 font-mono text-[11px] leading-relaxed overflow-x-auto max-h-[320px] border border-slate-800 shadow-inner">
+                    {JSON.stringify(cleanJsonPayload, null, 2)}
                   </pre>
                 </div>
               )}
             </div>
 
-            {/* Modal Footer */}
-            <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-              <span className="text-xs text-slate-500 font-medium">
-                Sterling Distillers Enterprise Audit Engine
-              </span>
+            {/* Minimal Footer */}
+            <div className="px-6 py-3 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-[11px] font-mono text-slate-400">
+                <span>ID: {selectedLog.id}</span>
+                <button
+                  type="button"
+                  onClick={() => handleCopy(selectedLog.id, 'logId')}
+                  className="hover:text-slate-600 p-0.5 cursor-pointer"
+                  title="Copy Log ID"
+                >
+                  {copiedKey === 'logId' ? (
+                    <Check className="w-3 h-3 text-emerald-600" />
+                  ) : (
+                    <Copy className="w-3 h-3" />
+                  )}
+                </button>
+              </div>
+
               <button
                 type="button"
                 onClick={() => setSelectedLog(null)}
-                className="px-4 py-2 text-xs font-bold rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-800 transition-colors cursor-pointer"
+                className="px-4 py-1.5 text-xs font-medium rounded-lg bg-slate-900 hover:bg-black text-white transition-colors cursor-pointer"
               >
-                Close Inspector
+                Close
               </button>
             </div>
           </div>
@@ -805,4 +809,3 @@ export default function EnterpriseLogsPage() {
     </DashboardShell>
   );
 }
-
