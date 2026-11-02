@@ -331,6 +331,9 @@ export interface SendPayslipResult {
  */
 export async function sendPayslipEmail(options: SendPayslipOptions): Promise<SendPayslipResult> {
   const { to, employeeName, employeeId, month, year, subject, body, pdfBuffer, filename } = options;
+  const startTime = Date.now();
+  let config: any = null;
+  let fromAddress = '';
 
   if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
     const errorMsg = `Invalid recipient email address: "${to}"`;
@@ -342,6 +345,10 @@ export async function sendPayslipEmail(options: SendPayslipOptions): Promise<Sen
       year,
       status: 'FAILED',
       errorMessage: errorMsg,
+      subject,
+      attachmentName: filename,
+      attachmentSize: pdfBuffer?.length || 0,
+      durationMs: Date.now() - startTime,
     });
     return { success: false, error: errorMsg };
   }
@@ -356,14 +363,18 @@ export async function sendPayslipEmail(options: SendPayslipOptions): Promise<Sen
       year,
       status: 'FAILED',
       errorMessage: errorMsg,
+      subject,
+      attachmentName: filename,
+      attachmentSize: 0,
+      durationMs: Date.now() - startTime,
     });
     return { success: false, error: errorMsg };
   }
 
   try {
-    const config = await getStoredSMTPConfig();
+    config = await getStoredSMTPConfig();
     const transporter = createTransporter(config);
-    const fromAddress = formatFromAddress(config.from, config.user);
+    fromAddress = formatFromAddress(config.from, config.user);
 
     const htmlBody = `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; line-height: 1.6; color: #1e293b; max-width: 600px; padding: 24px; border: 1px solid #e2e8f0; border-radius: 8px;">
@@ -404,6 +415,28 @@ ${escapeHtml(body)}
       ],
     });
 
+    const durationMs = Date.now() - startTime;
+    const finalAttachmentName = filename.endsWith('.pdf') ? filename : `${filename}.pdf`;
+    const responseBody = info.response || '250 2.0.0 OK: Message accepted for delivery';
+
+    const rawDetails = JSON.stringify({
+      messageId: info.messageId,
+      response: info.response,
+      accepted: info.accepted,
+      rejected: info.rejected,
+      envelope: info.envelope || { from: config.user, to: [to] },
+      smtp: {
+        host: config.host,
+        port: config.port,
+        secure: config.secure,
+        user: config.user,
+      },
+      client: {
+        service: 'Sterling Distillers Payslip Dispatch Service',
+        timestamp: new Date().toISOString(),
+      },
+    }, null, 2);
+
     await logEmailDispatch({
       employeeId,
       employeeName,
@@ -412,6 +445,16 @@ ${escapeHtml(body)}
       year,
       status: 'SUCCESS',
       errorMessage: null,
+      messageId: info.messageId || null,
+      smtpHost: config.host,
+      smtpPort: config.port,
+      fromAddress,
+      subject,
+      attachmentName: finalAttachmentName,
+      attachmentSize: pdfBuffer.length,
+      responseBody,
+      durationMs,
+      rawDetails,
     });
 
     return {
@@ -419,7 +462,25 @@ ${escapeHtml(body)}
       messageId: info.messageId,
     };
   } catch (err: any) {
+    const durationMs = Date.now() - startTime;
     const errorMsg = err.message || 'SMTP transmission failure';
+    const responseBody = err.response || err.code || 'SMTP_TRANSMISSION_ERROR';
+
+    const rawDetails = JSON.stringify({
+      code: err.code || null,
+      command: err.command || null,
+      response: err.response || null,
+      responseCode: err.responseCode || null,
+      stack: err.stack || null,
+      smtp: config ? {
+        host: config.host,
+        port: config.port,
+        user: config.user,
+        secure: config.secure,
+      } : null,
+      timestamp: new Date().toISOString(),
+    }, null, 2);
+
     await logEmailDispatch({
       employeeId,
       employeeName,
@@ -428,6 +489,16 @@ ${escapeHtml(body)}
       year,
       status: 'FAILED',
       errorMessage: errorMsg,
+      messageId: null,
+      smtpHost: config?.host || null,
+      smtpPort: config?.port || null,
+      fromAddress: fromAddress || null,
+      subject,
+      attachmentName: filename,
+      attachmentSize: pdfBuffer?.length || 0,
+      responseBody,
+      durationMs,
+      rawDetails,
     });
 
     return {

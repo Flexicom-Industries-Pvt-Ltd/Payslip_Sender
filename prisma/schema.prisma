@@ -23,19 +23,32 @@ model Employee {
 }
 
 model EmailDispatchLog {
-  id           String   @id @default(cuid())
-  employeeId   String
-  employeeName String
-  email        String
-  month        String
-  year         String
-  status       String   // "SUCCESS" | "FAILED"
-  errorMessage String?
-  sentAt       DateTime @default(now())
+  id              String   @id @default(cuid())
+  employeeId      String
+  employeeName    String
+  email           String
+  month           String
+  year            String
+  status          String   // "SUCCESS" | "FAILED"
+  errorMessage    String?
+  sentAt          DateTime @default(now())
+
+  messageId       String?
+  smtpHost        String?
+  smtpPort        Int?
+  fromAddress     String?
+  subject         String?
+  attachmentName  String?
+  attachmentSize  Int?
+  responseBody    String?
+  durationMs      Int?
+  rawDetails      String?
 
   @@index([employeeId])
   @@index([month, year])
   @@index([status])
+  @@index([sentAt])
+  @@index([messageId])
 }
 
 model SmtpConfig {

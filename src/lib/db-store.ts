@@ -23,6 +23,16 @@ export interface EmailDispatchRecord {
   status: 'SUCCESS' | 'FAILED';
   errorMessage?: string | null;
   sentAt: Date;
+  messageId?: string | null;
+  smtpHost?: string | null;
+  smtpPort?: number | null;
+  fromAddress?: string | null;
+  subject?: string | null;
+  attachmentName?: string | null;
+  attachmentSize?: number | null;
+  responseBody?: string | null;
+  durationMs?: number | null;
+  rawDetails?: string | null;
 }
 
 function getSafeDataDir(): string {
@@ -527,6 +537,16 @@ export async function logEmailDispatch(data: {
   year: string;
   status: 'SUCCESS' | 'FAILED';
   errorMessage?: string | null;
+  messageId?: string | null;
+  smtpHost?: string | null;
+  smtpPort?: number | null;
+  fromAddress?: string | null;
+  subject?: string | null;
+  attachmentName?: string | null;
+  attachmentSize?: number | null;
+  responseBody?: string | null;
+  durationMs?: number | null;
+  rawDetails?: string | null;
 }) {
   const isNeon = await isNeonPostgresActive();
   if (isNeon) {
@@ -540,6 +560,16 @@ export async function logEmailDispatch(data: {
           year: data.year,
           status: data.status,
           errorMessage: data.errorMessage || null,
+          messageId: data.messageId || null,
+          smtpHost: data.smtpHost || null,
+          smtpPort: data.smtpPort || null,
+          fromAddress: data.fromAddress || null,
+          subject: data.subject || null,
+          attachmentName: data.attachmentName || null,
+          attachmentSize: data.attachmentSize || null,
+          responseBody: data.responseBody || null,
+          durationMs: data.durationMs || null,
+          rawDetails: data.rawDetails || null,
         },
       });
     } catch {
@@ -558,6 +588,16 @@ export async function logEmailDispatch(data: {
     status: data.status,
     errorMessage: data.errorMessage || null,
     sentAt: new Date(),
+    messageId: data.messageId || null,
+    smtpHost: data.smtpHost || null,
+    smtpPort: data.smtpPort || null,
+    fromAddress: data.fromAddress || null,
+    subject: data.subject || null,
+    attachmentName: data.attachmentName || null,
+    attachmentSize: data.attachmentSize || null,
+    responseBody: data.responseBody || null,
+    durationMs: data.durationMs || null,
+    rawDetails: data.rawDetails || null,
   };
   logs.unshift(newLog); // latest first
   // Keep last 500 logs
@@ -580,6 +620,142 @@ export async function getEmailLogs(limit = 100) {
   }
   const logs = readLocalLogs();
   return logs.slice(0, limit);
+}
+
+export interface AuditLogFilterOptions {
+  search?: string;
+  status?: 'ALL' | 'SUCCESS' | 'FAILED';
+  month?: string;
+  year?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface EnterpriseLogMetrics {
+  totalDispatches: number;
+  successfulCount: number;
+  failedCount: number;
+  successRate: number;
+  avgDurationMs: number;
+  uniqueRecipients: number;
+}
+
+export async function getEnterpriseAuditLogs(options: AuditLogFilterOptions = {}) {
+  const { search = '', status = 'ALL', month, year, limit = 200, offset = 0 } = options;
+  const isNeon = await isNeonPostgresActive();
+
+  if (isNeon) {
+    try {
+      const where: any = {};
+      if (status && status !== 'ALL') {
+        where.status = status;
+      }
+      if (month) where.month = month;
+      if (year) where.year = year;
+      if (search.trim()) {
+        const query = search.trim();
+        where.OR = [
+          { employeeName: { contains: query, mode: 'insensitive' } },
+          { employeeId: { contains: query, mode: 'insensitive' } },
+          { email: { contains: query, mode: 'insensitive' } },
+          { messageId: { contains: query, mode: 'insensitive' } },
+          { subject: { contains: query, mode: 'insensitive' } },
+        ];
+      }
+
+      const [logs, totalCount, allLogsForMetrics] = await Promise.all([
+        prisma.emailDispatchLog.findMany({
+          where,
+          orderBy: { sentAt: 'desc' },
+          take: limit,
+          skip: offset,
+        }),
+        prisma.emailDispatchLog.count({ where }),
+        prisma.emailDispatchLog.findMany({
+          select: {
+            status: true,
+            durationMs: true,
+            email: true,
+          },
+        }),
+      ]);
+
+      const successfulCount = allLogsForMetrics.filter((l) => l.status === 'SUCCESS').length;
+      const failedCount = allLogsForMetrics.filter((l) => l.status === 'FAILED').length;
+      const totalDispatches = allLogsForMetrics.length;
+      const durations = allLogsForMetrics
+        .map((l) => l.durationMs)
+        .filter((d): d is number => typeof d === 'number' && d > 0);
+      const avgDurationMs =
+        durations.length > 0
+          ? Math.round(durations.reduce((acc, curr) => acc + curr, 0) / durations.length)
+          : 0;
+      const uniqueRecipients = new Set(allLogsForMetrics.map((l) => l.email)).size;
+
+      return {
+        logs,
+        totalCount,
+        metrics: {
+          totalDispatches,
+          successfulCount,
+          failedCount,
+          successRate: totalDispatches > 0 ? Math.round((successfulCount / totalDispatches) * 100) : 100,
+          avgDurationMs,
+          uniqueRecipients,
+        },
+      };
+    } catch {
+      // fallback
+    }
+  }
+
+  // Local fallback
+  let allLogs = readLocalLogs();
+  if (status && status !== 'ALL') {
+    allLogs = allLogs.filter((l) => l.status === status);
+  }
+  if (month) allLogs = allLogs.filter((l) => l.month === month);
+  if (year) allLogs = allLogs.filter((l) => l.year === year);
+  if (search.trim()) {
+    const q = search.trim().toLowerCase();
+    allLogs = allLogs.filter(
+      (l) =>
+        l.employeeName.toLowerCase().includes(q) ||
+        l.employeeId.toLowerCase().includes(q) ||
+        l.email.toLowerCase().includes(q) ||
+        (l.messageId && l.messageId.toLowerCase().includes(q)) ||
+        (l.subject && l.subject.toLowerCase().includes(q))
+    );
+  }
+
+  const totalCount = allLogs.length;
+  const paginatedLogs = allLogs.slice(offset, offset + limit);
+
+  const fullLogs = readLocalLogs();
+  const successfulCount = fullLogs.filter((l) => l.status === 'SUCCESS').length;
+  const failedCount = fullLogs.filter((l) => l.status === 'FAILED').length;
+  const totalDispatches = fullLogs.length;
+  const durations = fullLogs
+    .map((l) => l.durationMs)
+    .filter((d): d is number => typeof d === 'number' && d > 0);
+  const avgDurationMs =
+    durations.length > 0
+      ? Math.round(durations.reduce((acc, curr) => acc + curr, 0) / durations.length)
+      : 0;
+  const uniqueRecipients = new Set(fullLogs.map((l) => l.email)).size;
+
+  return {
+    logs: paginatedLogs,
+    totalCount,
+    metrics: {
+      totalDispatches,
+      successfulCount,
+      failedCount,
+      successRate: totalDispatches > 0 ? Math.round((successfulCount / totalDispatches) * 100) : 100,
+      avgDurationMs,
+      uniqueRecipients,
+    },
+  };
 }
 
 export async function getDashboardStats() {

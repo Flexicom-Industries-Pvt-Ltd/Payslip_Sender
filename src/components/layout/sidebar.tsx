@@ -10,6 +10,7 @@ import {
   Settings,
   Download,
   X,
+  ScrollText,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -27,6 +28,11 @@ const NAV_ITEMS = [
     name: 'Email Composer',
     href: '/composer',
     icon: MailCheck,
+  },
+  {
+    name: 'Audit Logs',
+    href: '/logs',
+    icon: ScrollText,
   },
   {
     name: 'Settings',
