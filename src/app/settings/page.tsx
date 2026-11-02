@@ -362,18 +362,7 @@ export default function SettingsPage() {
         )}
 
         {/* Quick Provider Presets */}
-        <div className={`p-3.5 bg-gradient-to-r from-slate-50/80 to-[#F2F8EA]/30 rounded-xl border border-slate-200/80 transition-opacity ${isLocked ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-[#78B338]" />
-              <span>One-Click Provider Quick Fill:</span>
-            </span>
-            {isLocked && (
-              <span className="text-[10px] text-slate-400 font-medium italic">
-                (Unlock below to use quick fill)
-              </span>
-            )}
-          </div>
+        <div className={`p-3 bg-slate-50/80 rounded-xl border border-slate-200/80 transition-opacity ${isLocked ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -599,12 +588,7 @@ export default function SettingsPage() {
           )}
 
           {/* Bottom Form Actions */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-5 border-t border-slate-100">
-            <span className="text-[11px] text-slate-500 flex items-center gap-1.5">
-              <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>Credentials are encrypted &amp; stored persistently in Neon PostgreSQL.</span>
-            </span>
-
+          <div className="flex flex-col sm:flex-row items-center justify-end gap-2.5 pt-5 border-t border-slate-100">
             <div className="flex items-center gap-2.5 w-full sm:w-auto">
               {/* Test Connection is ALWAYS available so Admin can verify handshake */}
               <button
