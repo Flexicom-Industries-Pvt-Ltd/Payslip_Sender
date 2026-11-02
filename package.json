@@ -1,6 +1,9 @@
 {
   "name": "mail-payslip-system",
-  "version": "0.1.0",
+  "version": "1.0.0",
+  "description": "Sterling Distillers — Employee Payslip Distribution Portal",
+  "author": "Sterling Distillers Private Limited",
+  "main": "electron/main.js",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -8,7 +11,47 @@
     "postinstall": "prisma generate",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsx scripts/test-workflow.ts"
+    "test": "tsx scripts/test-workflow.ts",
+    "electron:dev": "electron .",
+    "electron:build": "electron-builder --win",
+    "electron:pack": "electron-builder --dir",
+    "build:icons": "python scripts/generate-electron-icons.py"
+  },
+  "build": {
+    "appId": "com.sterlingdistillers.payslip",
+    "productName": "Sterling Distillers - Payslip Portal",
+    "copyright": "Copyright © 2026 Sterling Distillers Private Limited",
+    "artifactName": "Sterling-Distillers-Payslip-Portal-Setup-${version}.${ext}",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "electron/assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "electron/assets/icon.ico",
+      "uninstallerIcon": "electron/assets/icon.ico",
+      "installerHeaderIcon": "electron/assets/icon.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Sterling Distillers — Payslip Portal",
+      "uninstallDisplayName": "Sterling Distillers — Payslip Portal"
+    }
   },
   "dependencies": {
     "@prisma/client": "6.4.1",
@@ -27,8 +70,11 @@
     "@types/nodemailer": "^8.0.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "electron": "^45.2.1",
+    "electron-builder": "^26.18.0",
     "eslint": "^9",
     "eslint-config-next": "16.4.3",
+    "png-to-ico": "^3.0.2",
     "prisma": "6.4.1",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
