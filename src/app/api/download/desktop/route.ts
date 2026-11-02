@@ -1,10 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 
-export const dynamic = 'force-dynamic';
-
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const installerName = 'Sterling-Distillers-Payslip-Portal-Setup-1.0.0.exe';
     const localPath = path.join(process.cwd(), 'dist-electron', installerName);
