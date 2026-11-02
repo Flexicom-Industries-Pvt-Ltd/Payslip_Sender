@@ -103,6 +103,22 @@ export default function LoginPage() {
           </button>
         </form>
       </div>
+
+      {/* Sleek Login Footer */}
+      <div className="mt-8 text-center text-xs text-stone-500 space-y-1.5 select-none">
+        <div className="flex items-center justify-center gap-2">
+          <span>© 2026 Sterling Distillers Private Limited.</span>
+          <span>•</span>
+          <span>All rights reserved.</span>
+        </div>
+        <div className="flex items-center justify-center gap-1.5 text-[11px] text-stone-400">
+          <span>Enterprise Portal</span>
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono bg-[#2C2727] text-stone-300 border border-[#3E3636]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#78B338]"></span>
+            <span>v1.0.0</span>
+          </span>
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Sidebar } from './sidebar';
 import { Header } from './header';
+import { Footer } from './footer';
 
 interface DashboardShellProps {
   children: React.ReactNode;
@@ -12,11 +13,11 @@ export function DashboardShell({ children }: DashboardShellProps) {
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Header />
-        <main className="flex-1 overflow-y-auto p-6 lg:p-8">
-          <div className="max-w-7xl mx-auto space-y-6">{children}</div>
+        <main className="flex-1 overflow-y-auto p-6 lg:p-8 flex flex-col justify-between">
+          <div className="max-w-7xl mx-auto space-y-6 flex-1 w-full">{children}</div>
+          <Footer />
         </main>
       </div>
     </div>
   );
 }
-
