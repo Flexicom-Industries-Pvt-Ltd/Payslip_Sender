@@ -1,19 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getAuthSession } from '@/lib/auth';
+import { getWorkspaceById } from '@/lib/db-store';
 import { sendPayslipEmail, getSMTPConfigStatus } from '@/lib/mailer';
 
 export async function POST(request: NextRequest) {
   try {
-    const smtpStatus = await getSMTPConfigStatus();
+    const session = await getAuthSession();
+    if (!session) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const smtpStatus = await getSMTPConfigStatus(session.workspaceId);
     if (!smtpStatus.isConfigured) {
       return NextResponse.json(
         {
           success: false,
-          error: `SMTP is not configured on the server. Missing: ${smtpStatus.missingFields.join(', ')}. Please configure SMTP environment variables.`,
+          error: `SMTP is not configured for this workspace. Missing: ${smtpStatus.missingFields.join(', ')}. Please configure SMTP in Settings.`,
           isConfigError: true,
         },
         { status: 503 }
       );
     }
+
+    const workspace = await getWorkspaceById(session.workspaceId);
+    const companyName = workspace?.legalName || workspace?.name || 'Payslip Dispatch Portal';
 
     const formData = await request.formData();
     const file = formData.get('pdfFile') as File | null;
@@ -46,11 +56,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate PDF magic bytes / MIME type
     const arrayBuffer = await file.arrayBuffer();
     let pdfBuffer: Buffer | null = Buffer.from(arrayBuffer);
 
-    // Validate size limit (max 15MB)
     if (pdfBuffer.length > 15 * 1024 * 1024) {
       pdfBuffer = null;
       return NextResponse.json(
@@ -59,7 +67,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check header for %PDF
     const header = pdfBuffer.slice(0, 5).toString('ascii');
     if (!header.startsWith('%PDF-') && !file.name.toLowerCase().endsWith('.pdf')) {
       pdfBuffer = null;
@@ -69,8 +76,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Send email with Nodemailer
     const result = await sendPayslipEmail({
+      workspaceId: session.workspaceId,
+      companyName,
       to: toEmail.trim(),
       employeeName: employeeName.trim(),
       employeeId: employeeId.trim(),
@@ -82,7 +90,6 @@ export async function POST(request: NextRequest) {
       filename: file.name,
     });
 
-    // Explicitly release buffer
     pdfBuffer = null;
 
     if (!result.success) {
@@ -104,4 +111,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

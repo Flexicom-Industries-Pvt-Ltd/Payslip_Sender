@@ -4,6 +4,7 @@ import os from 'os';
 import nodemailer from 'nodemailer';
 import { prisma } from './prisma';
 import { logEmailDispatch, isNeonPostgresActive } from './db-store';
+import { DEFAULT_WORKSPACE_ID } from './auth';
 
 export interface SMTPStoredConfig {
   host: string;
@@ -28,7 +29,6 @@ export interface SMTPConfigStatus {
 }
 
 function getSafeDataDir(): string {
-  // On Vercel / AWS Lambda, process.cwd() is read-only /var/task. Use os.tmpdir()
   if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.NODE_ENV === 'production') {
     return path.join(os.tmpdir(), '.data');
   }
@@ -46,23 +46,26 @@ function ensureDataDir() {
   }
 }
 
-function getConfigFile(): string {
-  return path.join(getSafeDataDir(), 'smtp-config.json');
+function getConfigFile(workspaceId: string): string {
+  const safeId = workspaceId.replace(/[^a-zA-Z0-9_-]/g, '_');
+  return path.join(getSafeDataDir(), `smtp-config-${safeId}.json`);
 }
 
 /**
- * Loads dynamic SMTP settings:
+ * Loads dynamic SMTP settings strictly scoped to a specific workspaceId.
  * 1. Checks Neon PostgreSQL (persistent across all serverless invocations)
- * 2. Fallbacks to safe local file (if exists in /tmp or .data)
- * 3. Fallbacks to process.env
+ * 2. Fallbacks to workspace-scoped local file (if exists)
+ * 3. Only for the primary default workspace, optionally falls back to process.env
  */
-export async function getStoredSMTPConfig(): Promise<SMTPStoredConfig> {
+export async function getStoredSMTPConfig(
+  workspaceId: string = DEFAULT_WORKSPACE_ID
+): Promise<SMTPStoredConfig> {
   // 1. Check Neon PostgreSQL
   try {
     const isNeon = await isNeonPostgresActive();
     if (isNeon) {
       const dbConfig = await prisma.smtpConfig.findUnique({
-        where: { id: 'default' },
+        where: { workspaceId },
       });
       if (dbConfig && dbConfig.host) {
         return {
@@ -75,15 +78,26 @@ export async function getStoredSMTPConfig(): Promise<SMTPStoredConfig> {
           updatedAt: dbConfig.updatedAt.toISOString(),
         };
       }
+      // If Neon is active and this workspace has no config yet, do NOT fall back to env unless it's default workspace
+      if (workspaceId !== DEFAULT_WORKSPACE_ID) {
+        return {
+          host: '',
+          port: 587,
+          user: '',
+          password: '',
+          from: '',
+          secure: false,
+        };
+      }
     }
   } catch {
     // Neon query fallback
   }
 
-  // 2. Check local file store
+  // 2. Check workspace-scoped local file store
   try {
     ensureDataDir();
-    const configFile = getConfigFile();
+    const configFile = getConfigFile(workspaceId);
     if (fs.existsSync(configFile)) {
       const raw = fs.readFileSync(configFile, 'utf-8');
       const parsed = JSON.parse(raw);
@@ -103,63 +117,72 @@ export async function getStoredSMTPConfig(): Promise<SMTPStoredConfig> {
     // ignore
   }
 
-  // 3. Fallback to process.env
-  const host = process.env.SMTP_HOST || '';
-  const port = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 587;
-  const user = process.env.SMTP_USER || '';
-  const password = process.env.SMTP_PASSWORD || '';
-  const from = process.env.SMTP_FROM || user || '';
-  const secure = process.env.SMTP_SECURE === 'true' || port === 465;
+  // 3. Fallback to process.env ONLY for default workspace so new tenant workspaces start isolated
+  if (workspaceId === DEFAULT_WORKSPACE_ID) {
+    const host = process.env.SMTP_HOST || '';
+    const port = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 587;
+    const user = process.env.SMTP_USER || '';
+    const password = process.env.SMTP_PASSWORD || '';
+    const from = process.env.SMTP_FROM || user || '';
+    const secure = process.env.SMTP_SECURE === 'true' || port === 465;
+
+    return {
+      host,
+      port,
+      user,
+      password,
+      from,
+      secure,
+    };
+  }
 
   return {
-    host,
-    port,
-    user,
-    password,
-    from,
-    secure,
+    host: '',
+    port: 587,
+    user: '',
+    password: '',
+    from: '',
+    secure: false,
   };
 }
 
-/**
- * Saves dynamic SMTP settings:
- * 1. Persists to Neon PostgreSQL database
- * 2. Writes to safe local fallback file without crashing on read-only environments
- * 3. Updates in-memory process.env
- */
 export function formatFromAddress(from: string | null | undefined, user: string): string {
   const trimmed = (from || '').trim();
   if (!trimmed) {
     return user;
   }
-  // Already has <email>: e.g. "Tech Team <tech@plascom.in>"
   if (trimmed.includes('<') && trimmed.includes('>')) {
     return trimmed;
   }
-  // Has @ without <>: e.g. "tech@plascom.in"
   if (trimmed.includes('@')) {
     return trimmed;
   }
-  // Just a display name: e.g. "Tech Team" -> "Tech Team <tech@plascom.in>"
   return `${trimmed} <${user}>`;
 }
 
-export async function saveStoredSMTPConfig(data: {
-  host: string;
-  port: number;
-  user: string;
-  password?: string;
-  from: string;
-  secure?: boolean;
-}): Promise<SMTPConfigStatus> {
-  const current = await getStoredSMTPConfig();
+/**
+ * Saves dynamic SMTP settings scoped strictly to workspaceId.
+ * Never mutates global process.env to ensure zero cross-tenant leakage.
+ */
+export async function saveStoredSMTPConfig(
+  data: {
+    host: string;
+    port: number;
+    user: string;
+    password?: string;
+    from: string;
+    secure?: boolean;
+  },
+  workspaceId: string = DEFAULT_WORKSPACE_ID
+): Promise<SMTPConfigStatus> {
+  const current = await getStoredSMTPConfig(workspaceId);
   const host = data.host.trim();
   const port = Number(data.port) || (data.secure ? 465 : 587);
   const user = data.user.trim();
-  // If no password provided, retain existing password
-  const password = data.password !== undefined && data.password !== ''
-    ? data.password.trim()
-    : (current.password || '');
+  const password =
+    data.password !== undefined && data.password !== ''
+      ? data.password.trim()
+      : current.password || '';
   const from = formatFromAddress(data.from, user);
   const secure = data.secure !== undefined ? Boolean(data.secure) : port === 465;
 
@@ -168,9 +191,9 @@ export async function saveStoredSMTPConfig(data: {
     const isNeon = await isNeonPostgresActive();
     if (isNeon) {
       await prisma.smtpConfig.upsert({
-        where: { id: 'default' },
+        where: { workspaceId },
         create: {
-          id: 'default',
+          workspaceId,
           host,
           port,
           user,
@@ -192,10 +215,10 @@ export async function saveStoredSMTPConfig(data: {
     console.warn('Neon SMTP persistence notice:', err);
   }
 
-  // 2. Persist to safe directory if possible
+  // 2. Persist to workspace-scoped safe local directory if possible
   try {
     ensureDataDir();
-    const configFile = getConfigFile();
+    const configFile = getConfigFile(workspaceId);
     const toSave: SMTPStoredConfig = {
       host,
       port,
@@ -207,25 +230,19 @@ export async function saveStoredSMTPConfig(data: {
     };
     fs.writeFileSync(configFile, JSON.stringify(toSave, null, 2), 'utf-8');
   } catch {
-    // Gracefully ignore filesystem write restrictions on Vercel
+    // Gracefully ignore filesystem write restrictions
   }
 
-  // 3. Update process.env in memory
-  process.env.SMTP_HOST = host;
-  process.env.SMTP_PORT = String(port);
-  process.env.SMTP_USER = user;
-  process.env.SMTP_PASSWORD = password;
-  process.env.SMTP_FROM = from;
-  process.env.SMTP_SECURE = String(secure);
-
-  return await getSMTPConfigStatus();
+  return await getSMTPConfigStatus(workspaceId);
 }
 
 /**
  * Inspects status without exposing the raw password to the client.
  */
-export async function getSMTPConfigStatus(): Promise<SMTPConfigStatus> {
-  const config = await getStoredSMTPConfig();
+export async function getSMTPConfigStatus(
+  workspaceId: string = DEFAULT_WORKSPACE_ID
+): Promise<SMTPConfigStatus> {
+  const config = await getStoredSMTPConfig(workspaceId);
 
   const missingFields: string[] = [];
   if (!config.host) missingFields.push('SMTP Host');
@@ -266,17 +283,17 @@ export function createTransporter(config: SMTPStoredConfig) {
 }
 
 export async function verifySMTPConnection(
-  customConfig?: Partial<SMTPStoredConfig>
+  customConfig?: Partial<SMTPStoredConfig>,
+  workspaceId: string = DEFAULT_WORKSPACE_ID
 ): Promise<{
   success: boolean;
   message: string;
 }> {
   try {
-    const current = await getStoredSMTPConfig();
+    const current = await getStoredSMTPConfig(workspaceId);
     const configToTest: SMTPStoredConfig = {
       ...current,
       ...(customConfig || {}),
-      // If password not passed in test payload, use stored password
       password: customConfig?.password || current.password,
     };
 
@@ -306,6 +323,8 @@ export async function verifySMTPConnection(
 }
 
 export interface SendPayslipOptions {
+  workspaceId?: string;
+  companyName?: string;
   to: string;
   employeeName: string;
   employeeId: string;
@@ -325,12 +344,22 @@ export interface SendPayslipResult {
 
 /**
  * Sends a single payslip email to an individual employee with their attached PDF.
- * NEVER uses CC/BCC.
- * Verifies SMTP acceptance before reporting success.
- * In-memory buffer is discarded immediately.
+ * Strictly isolated by workspaceId. NEVER uses CC/BCC.
  */
 export async function sendPayslipEmail(options: SendPayslipOptions): Promise<SendPayslipResult> {
-  const { to, employeeName, employeeId, month, year, subject, body, pdfBuffer, filename } = options;
+  const {
+    workspaceId = DEFAULT_WORKSPACE_ID,
+    companyName = 'Payslip Dispatch Portal',
+    to,
+    employeeName,
+    employeeId,
+    month,
+    year,
+    subject,
+    body,
+    pdfBuffer,
+    filename,
+  } = options;
   const startTime = Date.now();
   let config: any = null;
   let fromAddress = '';
@@ -338,6 +367,7 @@ export async function sendPayslipEmail(options: SendPayslipOptions): Promise<Sen
   if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
     const errorMsg = `Invalid recipient email address: "${to}"`;
     await logEmailDispatch({
+      workspaceId,
       employeeId,
       employeeName,
       email: to || 'missing',
@@ -356,6 +386,7 @@ export async function sendPayslipEmail(options: SendPayslipOptions): Promise<Sen
   if (!pdfBuffer || pdfBuffer.length === 0) {
     const errorMsg = `PDF attachment is missing or empty for ${employeeName} (${employeeId})`;
     await logEmailDispatch({
+      workspaceId,
       employeeId,
       employeeName,
       email: to,
@@ -372,15 +403,15 @@ export async function sendPayslipEmail(options: SendPayslipOptions): Promise<Sen
   }
 
   try {
-    config = await getStoredSMTPConfig();
+    config = await getStoredSMTPConfig(workspaceId);
     const transporter = createTransporter(config);
     fromAddress = formatFromAddress(config.from, config.user);
 
     const htmlBody = `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; line-height: 1.6; color: #1e293b; max-width: 600px; padding: 24px; border: 1px solid #e2e8f0; border-radius: 8px;">
         <div style="margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid #e2e8f0;">
-          <h2 style="color: #0f172a; margin: 0 0 6px 0; font-size: 18px; font-weight: 600;">Salary Slip Notification</h2>
-          <span style="font-size: 13px; color: #64748b;">Period: ${month} ${year}</span>
+          <h2 style="color: #0f172a; margin: 0 0 6px 0; font-size: 18px; font-weight: 600;">${escapeHtml(companyName)} — Salary Slip Notification</h2>
+          <span style="font-size: 13px; color: #64748b;">Period: ${escapeHtml(month)} ${escapeHtml(year)}</span>
         </div>
         <div style="white-space: pre-wrap; margin-bottom: 24px; color: #334155;">
 ${escapeHtml(body)}
@@ -402,7 +433,7 @@ ${escapeHtml(body)}
         from: config.user,
         to,
       },
-      to, // strictly individual address
+      to,
       subject,
       text: body,
       html: htmlBody,
@@ -419,25 +450,31 @@ ${escapeHtml(body)}
     const finalAttachmentName = filename.endsWith('.pdf') ? filename : `${filename}.pdf`;
     const responseBody = info.response || '250 2.0.0 OK: Message accepted for delivery';
 
-    const rawDetails = JSON.stringify({
-      messageId: info.messageId,
-      response: info.response,
-      accepted: info.accepted,
-      rejected: info.rejected,
-      envelope: info.envelope || { from: config.user, to: [to] },
-      smtp: {
-        host: config.host,
-        port: config.port,
-        secure: config.secure,
-        user: config.user,
+    const rawDetails = JSON.stringify(
+      {
+        workspaceId,
+        messageId: info.messageId,
+        response: info.response,
+        accepted: info.accepted,
+        rejected: info.rejected,
+        envelope: info.envelope || { from: config.user, to: [to] },
+        smtp: {
+          host: config.host,
+          port: config.port,
+          secure: config.secure,
+          user: config.user,
+        },
+        client: {
+          service: `${companyName} Payslip Dispatch Service`,
+          timestamp: new Date().toISOString(),
+        },
       },
-      client: {
-        service: 'Sterling Distillers Payslip Dispatch Service',
-        timestamp: new Date().toISOString(),
-      },
-    }, null, 2);
+      null,
+      2
+    );
 
     await logEmailDispatch({
+      workspaceId,
       employeeId,
       employeeName,
       email: to,
@@ -466,22 +503,30 @@ ${escapeHtml(body)}
     const errorMsg = err.message || 'SMTP transmission failure';
     const responseBody = err.response || err.code || 'SMTP_TRANSMISSION_ERROR';
 
-    const rawDetails = JSON.stringify({
-      code: err.code || null,
-      command: err.command || null,
-      response: err.response || null,
-      responseCode: err.responseCode || null,
-      stack: err.stack || null,
-      smtp: config ? {
-        host: config.host,
-        port: config.port,
-        user: config.user,
-        secure: config.secure,
-      } : null,
-      timestamp: new Date().toISOString(),
-    }, null, 2);
+    const rawDetails = JSON.stringify(
+      {
+        workspaceId,
+        code: err.code || null,
+        command: err.command || null,
+        response: err.response || null,
+        responseCode: err.responseCode || null,
+        stack: err.stack || null,
+        smtp: config
+          ? {
+              host: config.host,
+              port: config.port,
+              user: config.user,
+              secure: config.secure,
+            }
+          : null,
+        timestamp: new Date().toISOString(),
+      },
+      null,
+      2
+    );
 
     await logEmailDispatch({
+      workspaceId,
       employeeId,
       employeeName,
       email: to,

@@ -7,6 +7,7 @@ export function generateSamplePayslipPdf(data: {
   name: string;
   month: string;
   year: string;
+  companyName?: string;
   department?: string;
   basicPay?: number;
   allowances?: number;
@@ -17,13 +18,14 @@ export function generateSamplePayslipPdf(data: {
   const deduct = data.deductions || 750;
   const gross = basic + allow;
   const net = gross - deduct;
+  const headerTitle = (data.companyName || 'PAYROLL DISPATCH SYSTEM').toUpperCase();
 
   // Formatted PDF stream content
   const textStream = [
     'BT',
     '/F1 15 Tf',
     '50 760 Td',
-    `(STERLING DISTILLERS PRIVATE LIMITED) Tj`,
+    `(${headerTitle}) Tj`,
     'ET',
     'BT',
     '/F1 12 Tf',
@@ -102,4 +104,3 @@ export function generateSamplePayslipPdf(data: {
   const fullPdf = objects.join('') + xref + trailer;
   return Buffer.from(fullPdf, 'utf-8');
 }
-

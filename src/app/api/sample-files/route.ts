@@ -1,15 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getAuthSession } from '@/lib/auth';
 import { generateSamplePayslipPdf } from '@/lib/sample-pdf';
-import { getEmployees } from '@/lib/db-store';
+import { getEmployees, getWorkspaceById } from '@/lib/db-store';
 
 export async function GET(request: NextRequest) {
   try {
+    const session = await getAuthSession();
+    if (!session) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const employeeId = searchParams.get('employeeId');
     const month = searchParams.get('month') || 'October';
     const year = searchParams.get('year') || '2026';
 
-    const employees = await getEmployees();
+    const [employees, workspace] = await Promise.all([
+      getEmployees(undefined, session.workspaceId),
+      getWorkspaceById(session.workspaceId),
+    ]);
+    const companyName = workspace?.legalName || workspace?.name || 'Company Payroll';
 
     if (employeeId) {
       const emp = employees.find((e) => e.employeeId.toLowerCase() === employeeId.toLowerCase());
@@ -21,6 +31,7 @@ export async function GET(request: NextRequest) {
         name,
         month,
         year,
+        companyName,
         department: dept,
       });
 
@@ -32,13 +43,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Return metadata and base64 payloads for quick one-click test loading
     const samples = employees.slice(0, 5).map((emp, idx) => {
-      // Intentionally vary naming formats to test our pattern matcher:
-      // 1. EMP001_SalarySlip.pdf
-      // 2. payslip-EMP002.pdf
-      // 3. John_Miller.pdf (Name based)
-      // 4. EMP004.pdf
       let filename = `Payslip_${emp.employeeId}.pdf`;
       if (idx === 1) filename = `payslip_${emp.employeeId}_${month}.pdf`;
       if (idx === 2) filename = `${emp.name.replace(/\s+/g, '_')}_Salary_Slip.pdf`;
@@ -49,6 +54,7 @@ export async function GET(request: NextRequest) {
         name: emp.name,
         month,
         year,
+        companyName,
         department: emp.department || 'General',
         basicPay: 4000 + idx * 800,
         allowances: 1200 + idx * 200,
@@ -64,12 +70,12 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    // Also include one unmatched file to demonstrate unmatched handling
     const unmatchedBuf = generateSamplePayslipPdf({
       employeeId: 'EMP999',
       name: 'External Contractor',
       month,
       year,
+      companyName,
       department: 'Consulting',
     });
     samples.push({
@@ -88,4 +94,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-

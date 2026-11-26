@@ -2,9 +2,54 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { prisma } from './prisma';
+import { DEFAULT_WORKSPACE_ID } from './auth';
+import { deriveThemePalette, slugifyWorkspaceName } from './theme-utils';
+import { buildDefaultEmailBody, DEFAULT_EMAIL_SUBJECT } from './email-templates';
+
+export interface WorkspaceRecord {
+  id: string;
+  slug: string;
+  name: string;
+  legalName: string | null;
+  tagline: string | null;
+  passcode: string;
+  logoUrl: string | null;
+  iconUrl: string | null;
+  heroImageUrl: string | null;
+  primaryColor: string;
+  hoverColor: string;
+  lightColor: string;
+  borderColor: string;
+  textColor: string;
+  defaultSubject: string | null;
+  defaultBody: string | null;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface WorkspacePublicBranding {
+  id: string;
+  slug: string;
+  name: string;
+  legalName: string | null;
+  tagline: string | null;
+  logoUrl: string | null;
+  iconUrl: string | null;
+  heroImageUrl: string | null;
+  primaryColor: string;
+  hoverColor: string;
+  lightColor: string;
+  borderColor: string;
+  textColor: string;
+  defaultSubject: string | null;
+  defaultBody: string | null;
+  isActive: boolean;
+}
 
 export interface EmployeeRecord {
   id: string;
+  workspaceId: string;
   employeeId: string;
   name: string;
   email: string;
@@ -15,6 +60,7 @@ export interface EmployeeRecord {
 
 export interface EmailDispatchRecord {
   id: string;
+  workspaceId: string;
   employeeId: string;
   employeeName: string;
   email: string;
@@ -54,6 +100,10 @@ function ensureDataDir(): string {
   return dir;
 }
 
+function getLocalWorkspacesFile(): string {
+  return path.join(ensureDataDir(), 'workspaces.json');
+}
+
 function getLocalEmployeesFile(): string {
   return path.join(ensureDataDir(), 'employees.json');
 }
@@ -62,54 +112,63 @@ function getLocalLogsFile(): string {
   return path.join(ensureDataDir(), 'email-logs.json');
 }
 
-function getInitialEmployees(): EmployeeRecord[] {
-  return [
-    {
-      id: 'emp_init_001',
-      employeeId: 'EMP001',
-      name: 'Sarah Connor',
-      email: 'sarah.connor@example.com',
-      department: 'Operations',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: 'emp_init_002',
-      employeeId: 'EMP002',
-      name: 'John Miller',
-      email: 'john.miller@example.com',
-      department: 'Engineering',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: 'emp_init_003',
-      employeeId: 'EMP003',
-      name: 'Elena Rostova',
-      email: 'elena.rostova@example.com',
-      department: 'Finance',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: 'emp_init_004',
-      employeeId: 'EMP004',
-      name: 'Michael Davis',
-      email: 'michael.davis@example.com',
-      department: 'Human Resources',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: 'emp_init_005',
-      employeeId: 'EMP005',
-      name: 'Aisha Patel',
-      email: 'aisha.patel@example.com',
-      department: 'Product & Design',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-  ];
+function getDefaultSterlingWorkspace(): WorkspaceRecord {
+  const now = new Date();
+  return {
+    id: DEFAULT_WORKSPACE_ID,
+    slug: 'sterling-distillers',
+    name: 'Sterling Distillers',
+    legalName: 'Sterling Distillers Private Limited',
+    tagline: 'Purba Bardhaman Plant • West Bengal',
+    passcode: process.env.HR_PASSCODE || 'admin123',
+    logoUrl: '/sterling-logo.jpg',
+    iconUrl: '/sterling-favicon.png',
+    heroImageUrl: '/sterling-project-1.jpg',
+    primaryColor: '#78B338',
+    hoverColor: '#689F2E',
+    lightColor: '#F2F8EA',
+    borderColor: '#D6EDBC',
+    textColor: '#3F6E15',
+    defaultSubject: DEFAULT_EMAIL_SUBJECT,
+    defaultBody: buildDefaultEmailBody('Sterling Distillers Private Limited'),
+    isActive: true,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+function readLocalWorkspaces(): WorkspaceRecord[] {
+  try {
+    const file = getLocalWorkspacesFile();
+    if (!fs.existsSync(file)) {
+      const defaults = [getDefaultSterlingWorkspace()];
+      writeLocalWorkspaces(defaults);
+      return defaults;
+    }
+    const raw = fs.readFileSync(file, 'utf-8');
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      const defaults = [getDefaultSterlingWorkspace()];
+      writeLocalWorkspaces(defaults);
+      return defaults;
+    }
+    return parsed.map((w: any) => ({
+      ...w,
+      createdAt: new Date(w.createdAt),
+      updatedAt: new Date(w.updatedAt),
+    }));
+  } catch {
+    return [getDefaultSterlingWorkspace()];
+  }
+}
+
+function writeLocalWorkspaces(records: WorkspaceRecord[]) {
+  try {
+    const file = getLocalWorkspacesFile();
+    fs.writeFileSync(file, JSON.stringify(records, null, 2), 'utf-8');
+  } catch {
+    // Gracefully ignore local file write restrictions
+  }
 }
 
 function readLocalEmployees(): EmployeeRecord[] {
@@ -125,6 +184,7 @@ function readLocalEmployees(): EmployeeRecord[] {
     }
     return parsed.map((e: any) => ({
       ...e,
+      workspaceId: e.workspaceId || DEFAULT_WORKSPACE_ID,
       createdAt: new Date(e.createdAt),
       updatedAt: new Date(e.updatedAt),
     }));
@@ -152,6 +212,7 @@ function readLocalLogs(): EmailDispatchRecord[] {
     const parsed = JSON.parse(raw);
     return parsed.map((log: any) => ({
       ...log,
+      workspaceId: log.workspaceId || DEFAULT_WORKSPACE_ID,
       sentAt: new Date(log.sentAt),
     }));
   } catch {
@@ -190,7 +251,7 @@ export async function isNeonPostgresActive(): Promise<boolean> {
     neonConnectedCache = true;
     lastCheckTime = now;
     return true;
-  } catch (err) {
+  } catch {
     neonConnectedCache = false;
     lastCheckTime = now;
     return false;
@@ -214,14 +275,374 @@ export async function getDatabaseStatus() {
   };
 }
 
-// ----------------- Employee CRUD Operations -----------------
+export function toPublicWorkspaceBranding(w: WorkspaceRecord): WorkspacePublicBranding {
+  return {
+    id: w.id,
+    slug: w.slug,
+    name: w.name,
+    legalName: w.legalName,
+    tagline: w.tagline,
+    logoUrl: w.logoUrl,
+    iconUrl: w.iconUrl,
+    heroImageUrl: w.heroImageUrl,
+    primaryColor: w.primaryColor,
+    hoverColor: w.hoverColor,
+    lightColor: w.lightColor,
+    borderColor: w.borderColor,
+    textColor: w.textColor,
+    defaultSubject: w.defaultSubject,
+    defaultBody: w.defaultBody,
+    isActive: w.isActive,
+  };
+}
 
-export async function getEmployees(filters?: { search?: string; department?: string }) {
+// ----------------- Workspace (Multi-Tenant) Operations -----------------
+
+export async function ensureDefaultWorkspace(): Promise<WorkspaceRecord> {
+  const isNeon = await isNeonPostgresActive();
+  const def = getDefaultSterlingWorkspace();
+
+  if (isNeon) {
+    try {
+      const existing = await prisma.workspace.findUnique({
+        where: { id: DEFAULT_WORKSPACE_ID },
+      });
+      if (existing) return existing;
+
+      return await prisma.workspace.create({
+        data: {
+          id: def.id,
+          slug: def.slug,
+          name: def.name,
+          legalName: def.legalName,
+          tagline: def.tagline,
+          passcode: def.passcode,
+          logoUrl: def.logoUrl,
+          iconUrl: def.iconUrl,
+          heroImageUrl: def.heroImageUrl,
+          primaryColor: def.primaryColor,
+          hoverColor: def.hoverColor,
+          lightColor: def.lightColor,
+          borderColor: def.borderColor,
+          textColor: def.textColor,
+          defaultSubject: def.defaultSubject,
+          defaultBody: def.defaultBody,
+          isActive: true,
+        },
+      });
+    } catch {
+      // fallback
+    }
+  }
+
+  const list = readLocalWorkspaces();
+  const found = list.find((w) => w.id === DEFAULT_WORKSPACE_ID);
+  if (found) return found;
+  list.unshift(def);
+  writeLocalWorkspaces(list);
+  return def;
+}
+
+export async function getWorkspacesWithStats() {
+  await ensureDefaultWorkspace();
   const isNeon = await isNeonPostgresActive();
 
   if (isNeon) {
     try {
-      const where: any = {};
+      const list = await prisma.workspace.findMany({
+        orderBy: { createdAt: 'asc' },
+        include: {
+          _count: {
+            select: {
+              employees: true,
+              dispatchLogs: true,
+            },
+          },
+          smtpConfig: {
+            select: {
+              host: true,
+              port: true,
+              user: true,
+            },
+          },
+        },
+      });
+      return list.map((w) => ({
+        ...toPublicWorkspaceBranding(w),
+        passcode: w.passcode,
+        createdAt: w.createdAt,
+        updatedAt: w.updatedAt,
+        employeeCount: w._count.employees,
+        dispatchCount: w._count.dispatchLogs,
+        smtpConfigured: Boolean(w.smtpConfig?.host && w.smtpConfig?.user),
+      }));
+    } catch {
+      // fallback
+    }
+  }
+
+  const workspaces = readLocalWorkspaces();
+  const employees = readLocalEmployees();
+  const logs = readLocalLogs();
+  return workspaces.map((w) => ({
+    ...toPublicWorkspaceBranding(w),
+    passcode: w.passcode,
+    createdAt: w.createdAt,
+    updatedAt: w.updatedAt,
+    employeeCount: employees.filter((e) => e.workspaceId === w.id).length,
+    dispatchCount: logs.filter((l) => l.workspaceId === w.id).length,
+    smtpConfigured: false,
+  }));
+}
+
+export async function getWorkspaceById(id: string): Promise<WorkspaceRecord | null> {
+  if (!id) return null;
+  if (id === DEFAULT_WORKSPACE_ID) {
+    return await ensureDefaultWorkspace();
+  }
+
+  const isNeon = await isNeonPostgresActive();
+  if (isNeon) {
+    try {
+      return await prisma.workspace.findUnique({ where: { id } });
+    } catch {
+      // fallback
+    }
+  }
+  const list = readLocalWorkspaces();
+  return list.find((w) => w.id === id) || null;
+}
+
+export async function getWorkspaceBySlug(slug: string): Promise<WorkspaceRecord | null> {
+  const clean = slug.trim().toLowerCase();
+  if (!clean) return null;
+  await ensureDefaultWorkspace();
+
+  const isNeon = await isNeonPostgresActive();
+  if (isNeon) {
+    try {
+      return await prisma.workspace.findUnique({ where: { slug: clean } });
+    } catch {
+      // fallback
+    }
+  }
+  const list = readLocalWorkspaces();
+  return list.find((w) => w.slug.toLowerCase() === clean) || null;
+}
+
+export async function createWorkspace(data: {
+  name: string;
+  slug?: string;
+  legalName?: string | null;
+  tagline?: string | null;
+  passcode: string;
+  logoUrl?: string | null;
+  iconUrl?: string | null;
+  heroImageUrl?: string | null;
+  primaryColor?: string;
+  defaultSubject?: string | null;
+  defaultBody?: string | null;
+}): Promise<WorkspaceRecord> {
+  const name = data.name.trim();
+  if (!name) throw new Error('Company name is required.');
+
+  const slug = slugifyWorkspaceName(data.slug || name);
+  if (!slug) throw new Error('A valid workspace slug is required.');
+
+  const passcode = (data.passcode || '').trim();
+  if (!passcode || passcode.length < 4) {
+    throw new Error('Workspace passcode must be at least 4 characters.');
+  }
+
+  const legalName = data.legalName?.trim() || name;
+  const palette = deriveThemePalette(data.primaryColor || '#2563EB');
+  const defaultSubject = data.defaultSubject?.trim() || DEFAULT_EMAIL_SUBJECT;
+  const defaultBody = data.defaultBody?.trim() || buildDefaultEmailBody(legalName);
+
+  const isNeon = await isNeonPostgresActive();
+  if (isNeon) {
+    try {
+      return await prisma.workspace.create({
+        data: {
+          slug,
+          name,
+          legalName,
+          tagline: data.tagline?.trim() || null,
+          passcode,
+          logoUrl: data.logoUrl || null,
+          iconUrl: data.iconUrl || data.logoUrl || null,
+          heroImageUrl: data.heroImageUrl || null,
+          primaryColor: palette.primaryColor,
+          hoverColor: palette.hoverColor,
+          lightColor: palette.lightColor,
+          borderColor: palette.borderColor,
+          textColor: palette.textColor,
+          defaultSubject,
+          defaultBody,
+          isActive: true,
+        },
+      });
+    } catch (err: any) {
+      if (err.code === 'P2002') {
+        throw new Error(`Workspace code "${slug}" is already in use. Please choose another slug.`);
+      }
+      throw err;
+    }
+  }
+
+  const list = readLocalWorkspaces();
+  if (list.some((w) => w.slug.toLowerCase() === slug.toLowerCase())) {
+    throw new Error(`Workspace code "${slug}" is already in use.`);
+  }
+
+  const now = new Date();
+  const created: WorkspaceRecord = {
+    id: `ws_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    slug,
+    name,
+    legalName,
+    tagline: data.tagline?.trim() || null,
+    passcode,
+    logoUrl: data.logoUrl || null,
+    iconUrl: data.iconUrl || data.logoUrl || null,
+    heroImageUrl: data.heroImageUrl || null,
+    primaryColor: palette.primaryColor,
+    hoverColor: palette.hoverColor,
+    lightColor: palette.lightColor,
+    borderColor: palette.borderColor,
+    textColor: palette.textColor,
+    defaultSubject,
+    defaultBody,
+    isActive: true,
+    createdAt: now,
+    updatedAt: now,
+  };
+  list.push(created);
+  writeLocalWorkspaces(list);
+  return created;
+}
+
+export async function updateWorkspace(
+  id: string,
+  data: {
+    name?: string;
+    slug?: string;
+    legalName?: string | null;
+    tagline?: string | null;
+    passcode?: string;
+    logoUrl?: string | null;
+    iconUrl?: string | null;
+    heroImageUrl?: string | null;
+    primaryColor?: string;
+    defaultSubject?: string | null;
+    defaultBody?: string | null;
+    isActive?: boolean;
+  }
+): Promise<WorkspaceRecord> {
+  const existing = await getWorkspaceById(id);
+  if (!existing) throw new Error('Workspace not found');
+
+  const updatePayload: any = {};
+  if (data.name !== undefined && data.name.trim()) {
+    updatePayload.name = data.name.trim();
+  }
+  if (data.slug !== undefined && data.slug.trim()) {
+    const cleanSlug = slugifyWorkspaceName(data.slug);
+    if (!cleanSlug) throw new Error('Invalid workspace slug');
+    updatePayload.slug = cleanSlug;
+  }
+  if (data.legalName !== undefined) {
+    updatePayload.legalName = data.legalName?.trim() || null;
+  }
+  if (data.tagline !== undefined) {
+    updatePayload.tagline = data.tagline?.trim() || null;
+  }
+  if (data.passcode !== undefined && data.passcode.trim()) {
+    if (data.passcode.trim().length < 4) {
+      throw new Error('Workspace passcode must be at least 4 characters.');
+    }
+    updatePayload.passcode = data.passcode.trim();
+  }
+  if (data.logoUrl !== undefined) updatePayload.logoUrl = data.logoUrl || null;
+  if (data.iconUrl !== undefined) updatePayload.iconUrl = data.iconUrl || null;
+  if (data.heroImageUrl !== undefined) updatePayload.heroImageUrl = data.heroImageUrl || null;
+  if (data.defaultSubject !== undefined) updatePayload.defaultSubject = data.defaultSubject || null;
+  if (data.defaultBody !== undefined) updatePayload.defaultBody = data.defaultBody || null;
+  if (data.isActive !== undefined) updatePayload.isActive = Boolean(data.isActive);
+
+  if (data.primaryColor) {
+    const palette = deriveThemePalette(data.primaryColor);
+    updatePayload.primaryColor = palette.primaryColor;
+    updatePayload.hoverColor = palette.hoverColor;
+    updatePayload.lightColor = palette.lightColor;
+    updatePayload.borderColor = palette.borderColor;
+    updatePayload.textColor = palette.textColor;
+  }
+
+  const isNeon = await isNeonPostgresActive();
+  if (isNeon) {
+    try {
+      return await prisma.workspace.update({
+        where: { id },
+        data: updatePayload,
+      });
+    } catch (err: any) {
+      if (err.code === 'P2002') {
+        throw new Error('Workspace slug is already in use by another company.');
+      }
+      throw err;
+    }
+  }
+
+  const list = readLocalWorkspaces();
+  const idx = list.findIndex((w) => w.id === id);
+  if (idx === -1) throw new Error('Workspace not found');
+  if (updatePayload.slug) {
+    const dup = list.find((w) => w.id !== id && w.slug === updatePayload.slug);
+    if (dup) throw new Error('Workspace slug is already in use by another company.');
+  }
+  list[idx] = {
+    ...list[idx],
+    ...updatePayload,
+    updatedAt: new Date(),
+  };
+  writeLocalWorkspaces(list);
+  return list[idx];
+}
+
+export async function deleteWorkspace(id: string) {
+  if (id === DEFAULT_WORKSPACE_ID) {
+    throw new Error('The primary default workspace cannot be deleted.');
+  }
+
+  const isNeon = await isNeonPostgresActive();
+  if (isNeon) {
+    return await prisma.workspace.delete({ where: { id } });
+  }
+
+  const list = readLocalWorkspaces();
+  const idx = list.findIndex((w) => w.id === id);
+  if (idx === -1) throw new Error('Workspace not found');
+  const [deleted] = list.splice(idx, 1);
+  writeLocalWorkspaces(list);
+
+  // Clean up local employees and logs for deleted workspace
+  writeLocalEmployees(readLocalEmployees().filter((e) => e.workspaceId !== id));
+  writeLocalLogs(readLocalLogs().filter((l) => l.workspaceId !== id));
+  return deleted;
+}
+
+// ----------------- Employee CRUD Operations (Workspace Scoped) -----------------
+
+export async function getEmployees(
+  filters?: { search?: string; department?: string },
+  workspaceId: string = DEFAULT_WORKSPACE_ID
+) {
+  const isNeon = await isNeonPostgresActive();
+
+  if (isNeon) {
+    try {
+      const where: any = { workspaceId };
       if (filters?.department && filters.department !== 'all') {
         where.department = filters.department;
       }
@@ -242,7 +663,7 @@ export async function getEmployees(filters?: { search?: string; department?: str
     }
   }
 
-  let list = readLocalEmployees();
+  let list = readLocalEmployees().filter((e) => e.workspaceId === workspaceId);
   if (filters?.department && filters.department !== 'all') {
     list = list.filter((e) => e.department?.toLowerCase() === filters.department?.toLowerCase());
   }
@@ -258,41 +679,58 @@ export async function getEmployees(filters?: { search?: string; department?: str
   return list.sort((a, b) => a.employeeId.localeCompare(b.employeeId));
 }
 
-export async function getEmployeeById(id: string) {
+export async function getEmployeeById(id: string, workspaceId: string = DEFAULT_WORKSPACE_ID) {
   const isNeon = await isNeonPostgresActive();
   if (isNeon) {
     try {
-      return await prisma.employee.findUnique({ where: { id } });
+      return await prisma.employee.findFirst({ where: { id, workspaceId } });
     } catch {
       // fallback
     }
   }
   const list = readLocalEmployees();
-  return list.find((e) => e.id === id) || null;
+  return list.find((e) => e.id === id && e.workspaceId === workspaceId) || null;
 }
 
-export async function getEmployeeByEmployeeId(employeeId: string) {
+export async function getEmployeeByEmployeeId(
+  employeeId: string,
+  workspaceId: string = DEFAULT_WORKSPACE_ID
+) {
   const isNeon = await isNeonPostgresActive();
   const trimmed = employeeId.trim();
   if (isNeon) {
     try {
       return await prisma.employee.findUnique({
-        where: { employeeId: trimmed },
+        where: {
+          workspaceId_employeeId: {
+            workspaceId,
+            employeeId: trimmed,
+          },
+        },
       });
     } catch {
       // fallback
     }
   }
   const list = readLocalEmployees();
-  return list.find((e) => e.employeeId.toLowerCase() === trimmed.toLowerCase()) || null;
+  return (
+    list.find(
+      (e) =>
+        e.workspaceId === workspaceId &&
+        e.employeeId.toLowerCase() === trimmed.toLowerCase()
+    ) || null
+  );
 }
 
-export async function createEmployee(data: {
-  employeeId: string;
-  name: string;
-  email: string;
-  department?: string | null;
-}) {
+export async function createEmployee(
+  data: {
+    employeeId: string;
+    name: string;
+    email: string;
+    department?: string | null;
+  },
+  workspaceId: string = DEFAULT_WORKSPACE_ID
+) {
   const employeeId = data.employeeId.trim();
   const name = data.name.trim();
   const email = data.email.trim().toLowerCase();
@@ -303,6 +741,7 @@ export async function createEmployee(data: {
     try {
       return await prisma.employee.create({
         data: {
+          workspaceId,
           employeeId,
           name,
           email,
@@ -311,20 +750,25 @@ export async function createEmployee(data: {
       });
     } catch (err: any) {
       if (err.code === 'P2002') {
-        throw new Error(`An employee with ID "${employeeId}" already exists.`);
+        throw new Error(`An employee with ID "${employeeId}" already exists in this workspace.`);
       }
       throw err;
     }
   }
 
   const list = readLocalEmployees();
-  const existing = list.find((e) => e.employeeId.toLowerCase() === employeeId.toLowerCase());
+  const existing = list.find(
+    (e) =>
+      e.workspaceId === workspaceId &&
+      e.employeeId.toLowerCase() === employeeId.toLowerCase()
+  );
   if (existing) {
-    throw new Error(`An employee with ID "${employeeId}" already exists.`);
+    throw new Error(`An employee with ID "${employeeId}" already exists in this workspace.`);
   }
 
   const newRecord: EmployeeRecord = {
     id: `emp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    workspaceId,
     employeeId,
     name,
     email,
@@ -345,11 +789,15 @@ export async function updateEmployee(
     name?: string;
     email?: string;
     department?: string | null;
-  }
+  },
+  workspaceId: string = DEFAULT_WORKSPACE_ID
 ) {
   const isNeon = await isNeonPostgresActive();
   if (isNeon) {
     try {
+      const existing = await prisma.employee.findFirst({ where: { id, workspaceId } });
+      if (!existing) throw new Error('Employee not found in this workspace');
+
       return await prisma.employee.update({
         where: { id },
         data: {
@@ -361,14 +809,14 @@ export async function updateEmployee(
       });
     } catch (err: any) {
       if (err.code === 'P2002') {
-        throw new Error(`An employee with this Employee ID already exists.`);
+        throw new Error(`An employee with this Employee ID already exists in this workspace.`);
       }
       throw err;
     }
   }
 
   const list = readLocalEmployees();
-  const index = list.findIndex((e) => e.id === id);
+  const index = list.findIndex((e) => e.id === id && e.workspaceId === workspaceId);
   if (index === -1) {
     throw new Error('Employee not found');
   }
@@ -376,7 +824,10 @@ export async function updateEmployee(
   if (data.employeeId) {
     const targetId = data.employeeId.trim();
     const duplicate = list.find(
-      (e) => e.id !== id && e.employeeId.toLowerCase() === targetId.toLowerCase()
+      (e) =>
+        e.workspaceId === workspaceId &&
+        e.id !== id &&
+        e.employeeId.toLowerCase() === targetId.toLowerCase()
     );
     if (duplicate) {
       throw new Error(`Employee ID "${targetId}" is already used by another employee.`);
@@ -393,25 +844,23 @@ export async function updateEmployee(
   return list[index];
 }
 
-export async function deleteEmployee(id: string) {
+export async function deleteEmployee(
+  id: string,
+  workspaceId: string = DEFAULT_WORKSPACE_ID
+) {
   const isNeon = await isNeonPostgresActive();
   if (isNeon) {
     try {
-      // Find employee first to clean up associated dispatch logs
-      const emp = await prisma.employee.findUnique({ where: { id } });
+      const emp = await prisma.employee.findFirst({ where: { id, workspaceId } });
+      if (!emp) throw new Error('Employee not found in this workspace');
       const deleted = await prisma.employee.delete({ where: { id } });
 
-      if (emp) {
-        // Automatically delete dispatch logs for the deleted employee
-        await prisma.emailDispatchLog.deleteMany({
-          where: {
-            OR: [
-              { employeeId: emp.employeeId },
-              { email: emp.email },
-            ],
-          },
-        });
-      }
+      await prisma.emailDispatchLog.deleteMany({
+        where: {
+          workspaceId,
+          OR: [{ employeeId: emp.employeeId }, { email: emp.email }],
+        },
+      });
 
       return deleted;
     } catch {
@@ -420,20 +869,20 @@ export async function deleteEmployee(id: string) {
   }
 
   const list = readLocalEmployees();
-  const index = list.findIndex((e) => e.id === id);
+  const index = list.findIndex((e) => e.id === id && e.workspaceId === workspaceId);
   if (index === -1) {
     throw new Error('Employee not found');
   }
   const [deleted] = list.splice(index, 1);
   writeLocalEmployees(list);
 
-  // Clean up local fallback logs
   try {
     const localLogs = readLocalLogs();
     const cleaned = localLogs.filter(
       (l) =>
-        l.employeeId.toLowerCase() !== deleted.employeeId.toLowerCase() &&
-        l.email.toLowerCase() !== deleted.email.toLowerCase()
+        l.workspaceId !== workspaceId ||
+        (l.employeeId.toLowerCase() !== deleted.employeeId.toLowerCase() &&
+          l.email.toLowerCase() !== deleted.email.toLowerCase())
     );
     writeLocalLogs(cleaned);
   } catch {
@@ -449,7 +898,8 @@ export async function bulkUpsertEmployees(
     name: string;
     email: string;
     department?: string | null;
-  }>
+  }>,
+  workspaceId: string = DEFAULT_WORKSPACE_ID
 ) {
   let createdCount = 0;
   let updatedCount = 0;
@@ -480,16 +930,23 @@ export async function bulkUpsertEmployees(
 
     if (isNeon) {
       try {
-        const existing = await prisma.employee.findUnique({ where: { employeeId: empId } });
+        const existing = await prisma.employee.findUnique({
+          where: {
+            workspaceId_employeeId: {
+              workspaceId,
+              employeeId: empId,
+            },
+          },
+        });
         if (existing) {
           await prisma.employee.update({
-            where: { employeeId: empId },
+            where: { id: existing.id },
             data: { name, email, department },
           });
           updatedCount++;
         } else {
           await prisma.employee.create({
-            data: { employeeId: empId, name, email, department },
+            data: { workspaceId, employeeId: empId, name, email, department },
           });
           createdCount++;
         }
@@ -498,7 +955,11 @@ export async function bulkUpsertEmployees(
       }
     } else {
       const list = readLocalEmployees();
-      const existingIndex = list.findIndex((e) => e.employeeId.toLowerCase() === empId.toLowerCase());
+      const existingIndex = list.findIndex(
+        (e) =>
+          e.workspaceId === workspaceId &&
+          e.employeeId.toLowerCase() === empId.toLowerCase()
+      );
       if (existingIndex >= 0) {
         list[existingIndex] = {
           ...list[existingIndex],
@@ -511,6 +972,7 @@ export async function bulkUpsertEmployees(
       } else {
         list.push({
           id: `emp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+          workspaceId,
           employeeId: empId,
           name,
           email,
@@ -527,9 +989,10 @@ export async function bulkUpsertEmployees(
   return { createdCount, updatedCount, errors };
 }
 
-// ----------------- Dispatch Logs Operations -----------------
+// ----------------- Dispatch Logs Operations (Workspace Scoped) -----------------
 
 export async function logEmailDispatch(data: {
+  workspaceId?: string;
   employeeId: string;
   employeeName: string;
   email: string;
@@ -548,11 +1011,13 @@ export async function logEmailDispatch(data: {
   durationMs?: number | null;
   rawDetails?: string | null;
 }) {
+  const workspaceId = data.workspaceId || DEFAULT_WORKSPACE_ID;
   const isNeon = await isNeonPostgresActive();
   if (isNeon) {
     try {
-      return await (prisma.emailDispatchLog.create as any)({
+      return await prisma.emailDispatchLog.create({
         data: {
+          workspaceId,
           employeeId: data.employeeId,
           employeeName: data.employeeName,
           email: data.email,
@@ -580,6 +1045,7 @@ export async function logEmailDispatch(data: {
   const logs = readLocalLogs();
   const newLog: EmailDispatchRecord = {
     id: `log_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    workspaceId,
     employeeId: data.employeeId,
     employeeName: data.employeeName,
     email: data.email,
@@ -599,18 +1065,18 @@ export async function logEmailDispatch(data: {
     durationMs: data.durationMs || null,
     rawDetails: data.rawDetails || null,
   };
-  logs.unshift(newLog); // latest first
-  // Keep last 500 logs
-  if (logs.length > 500) logs.length = 500;
+  logs.unshift(newLog);
+  if (logs.length > 1000) logs.length = 1000;
   writeLocalLogs(logs);
   return newLog;
 }
 
-export async function getEmailLogs(limit = 100) {
+export async function getEmailLogs(limit = 100, workspaceId: string = DEFAULT_WORKSPACE_ID) {
   const isNeon = await isNeonPostgresActive();
   if (isNeon) {
     try {
       return await prisma.emailDispatchLog.findMany({
+        where: { workspaceId },
         take: limit,
         orderBy: { sentAt: 'desc' },
       });
@@ -618,11 +1084,12 @@ export async function getEmailLogs(limit = 100) {
       // fallback
     }
   }
-  const logs = readLocalLogs();
+  const logs = readLocalLogs().filter((l) => l.workspaceId === workspaceId);
   return logs.slice(0, limit);
 }
 
 export interface AuditLogFilterOptions {
+  workspaceId?: string;
   search?: string;
   status?: 'ALL' | 'SUCCESS' | 'FAILED';
   month?: string;
@@ -641,12 +1108,20 @@ export interface EnterpriseLogMetrics {
 }
 
 export async function getEnterpriseAuditLogs(options: AuditLogFilterOptions = {}) {
-  const { search = '', status = 'ALL', month, year, limit = 200, offset = 0 } = options;
+  const {
+    workspaceId = DEFAULT_WORKSPACE_ID,
+    search = '',
+    status = 'ALL',
+    month,
+    year,
+    limit = 200,
+    offset = 0,
+  } = options;
   const isNeon = await isNeonPostgresActive();
 
   if (isNeon) {
     try {
-      const where: any = {};
+      const where: any = { workspaceId };
       if (status && status !== 'ALL') {
         where.status = status;
       }
@@ -664,14 +1139,15 @@ export async function getEnterpriseAuditLogs(options: AuditLogFilterOptions = {}
       }
 
       const [logs, totalCount, allLogsForMetrics] = await Promise.all([
-        (prisma.emailDispatchLog.findMany as any)({
+        prisma.emailDispatchLog.findMany({
           where,
           orderBy: { sentAt: 'desc' },
           take: limit,
           skip: offset,
         }),
         prisma.emailDispatchLog.count({ where }),
-        (prisma.emailDispatchLog.findMany as any)({
+        prisma.emailDispatchLog.findMany({
+          where: { workspaceId },
           select: {
             status: true,
             durationMs: true,
@@ -680,17 +1156,17 @@ export async function getEnterpriseAuditLogs(options: AuditLogFilterOptions = {}
         }),
       ]);
 
-      const successfulCount = allLogsForMetrics.filter((l: any) => l.status === 'SUCCESS').length;
-      const failedCount = allLogsForMetrics.filter((l: any) => l.status === 'FAILED').length;
+      const successfulCount = allLogsForMetrics.filter((l) => l.status === 'SUCCESS').length;
+      const failedCount = allLogsForMetrics.filter((l) => l.status === 'FAILED').length;
       const totalDispatches = allLogsForMetrics.length;
       const durations = allLogsForMetrics
-        .map((l: any) => l.durationMs)
-        .filter((d: any): d is number => typeof d === 'number' && d > 0);
+        .map((l) => l.durationMs)
+        .filter((d): d is number => typeof d === 'number' && d > 0);
       const avgDurationMs =
         durations.length > 0
-          ? Math.round(durations.reduce((acc: number, curr: number) => acc + curr, 0) / durations.length)
+          ? Math.round(durations.reduce((acc, curr) => acc + curr, 0) / durations.length)
           : 0;
-      const uniqueRecipients = new Set(allLogsForMetrics.map((l: any) => l.email)).size;
+      const uniqueRecipients = new Set(allLogsForMetrics.map((l) => l.email)).size;
 
       return {
         logs,
@@ -709,8 +1185,7 @@ export async function getEnterpriseAuditLogs(options: AuditLogFilterOptions = {}
     }
   }
 
-  // Local fallback
-  let allLogs = readLocalLogs();
+  let allLogs = readLocalLogs().filter((l) => l.workspaceId === workspaceId);
   if (status && status !== 'ALL') {
     allLogs = allLogs.filter((l) => l.status === status);
   }
@@ -731,7 +1206,7 @@ export async function getEnterpriseAuditLogs(options: AuditLogFilterOptions = {}
   const totalCount = allLogs.length;
   const paginatedLogs = allLogs.slice(offset, offset + limit);
 
-  const fullLogs = readLocalLogs();
+  const fullLogs = readLocalLogs().filter((l) => l.workspaceId === workspaceId);
   const successfulCount = fullLogs.filter((l) => l.status === 'SUCCESS').length;
   const failedCount = fullLogs.filter((l) => l.status === 'FAILED').length;
   const totalDispatches = fullLogs.length;
@@ -758,9 +1233,9 @@ export async function getEnterpriseAuditLogs(options: AuditLogFilterOptions = {}
   };
 }
 
-export async function getDashboardStats() {
-  const employees = await getEmployees();
-  const logs = await getEmailLogs(200);
+export async function getDashboardStats(workspaceId: string = DEFAULT_WORKSPACE_ID) {
+  const employees = await getEmployees(undefined, workspaceId);
+  const logs = await getEmailLogs(200, workspaceId);
 
   const totalEmployees = employees.length;
   const validEmailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -769,7 +1244,6 @@ export async function getDashboardStats() {
   const successfulSends = logs.filter((l) => l.status === 'SUCCESS').length;
   const failedSends = logs.filter((l) => l.status === 'FAILED').length;
 
-  // Unique departments
   const departments = Array.from(
     new Set(employees.map((e) => e.department).filter(Boolean) as string[])
   );
@@ -810,19 +1284,24 @@ export interface EmployeeWithStatus extends EmployeeRecord {
 }
 
 export async function getEmployeesWithMonthlyStatus(options?: {
+  workspaceId?: string;
   search?: string;
   department?: string;
   month?: string;
   year?: string;
   statusFilter?: 'all' | 'sent' | 'missed' | 'failed';
 }) {
+  const workspaceId = options?.workspaceId || DEFAULT_WORKSPACE_ID;
   const month = options?.month || 'October';
   const year = options?.year || '2026';
 
-  const employees = await getEmployees({
-    search: options?.search,
-    department: options?.department,
-  });
+  const employees = await getEmployees(
+    {
+      search: options?.search,
+      department: options?.department,
+    },
+    workspaceId
+  );
 
   const isNeon = await isNeonPostgresActive();
   let allLogsForYear: EmailDispatchRecord[] = [];
@@ -830,20 +1309,17 @@ export async function getEmployeesWithMonthlyStatus(options?: {
   if (isNeon) {
     try {
       allLogsForYear = (await prisma.emailDispatchLog.findMany({
-        where: { year },
+        where: { workspaceId, year },
         orderBy: { sentAt: 'desc' },
       })) as EmailDispatchRecord[];
     } catch {
       // fallback
     }
-  }
-
-  if (allLogsForYear.length === 0) {
+  } else {
     const localLogs = readLocalLogs();
-    allLogsForYear = localLogs.filter((l) => l.year === year);
+    allLogsForYear = localLogs.filter((l) => l.workspaceId === workspaceId && l.year === year);
   }
 
-  // Only consider logs belonging to existing, active employees
   const activeEmpIds = new Set(employees.map((e) => e.employeeId.toLowerCase()));
   const activeEmails = new Set(employees.map((e) => e.email.toLowerCase()));
 
@@ -853,12 +1329,10 @@ export async function getEmployeesWithMonthlyStatus(options?: {
       activeEmails.has(l.email.toLowerCase())
   );
 
-  // Filter logs for the specific selected month
   const logsForPeriod = activeLogsForYear.filter(
     (l) => l.month.toLowerCase() === month.toLowerCase()
   );
 
-  // Lookup maps for the primary selected month
   const successMap = new Map<string, EmailDispatchRecord>();
   const failedMap = new Map<string, EmailDispatchRecord>();
 
@@ -871,24 +1345,20 @@ export async function getEmployeesWithMonthlyStatus(options?: {
     }
   }
 
-  // Build employee-level yearly map and history across all months in the year
   const employeeYearlyMaps = new Map<string, Record<string, 'SENT' | 'FAILED'>>();
   const employeeHistories = new Map<string, MonthStatusRecord[]>();
 
   for (const log of activeLogsForYear) {
     const key = log.employeeId.toLowerCase();
 
-    // Yearly month map
     if (!employeeYearlyMaps.has(key)) {
       employeeYearlyMaps.set(key, {});
     }
     const yMap = employeeYearlyMaps.get(key)!;
-    // Don't overwrite SUCCESS with FAILED if there are multiple attempts
     if (log.status === 'SUCCESS' || !yMap[log.month]) {
       yMap[log.month] = log.status === 'SUCCESS' ? 'SENT' : 'FAILED';
     }
 
-    // Full dispatch history
     if (!employeeHistories.has(key)) {
       employeeHistories.set(key, []);
     }
@@ -902,7 +1372,6 @@ export async function getEmployeesWithMonthlyStatus(options?: {
     });
   }
 
-  // Calculate active months summary for the period jumper (strictly for existing employees)
   const monthCounts = new Map<string, Set<string>>();
   if (employees.length > 0) {
     for (const log of activeLogsForYear) {
@@ -982,4 +1451,3 @@ export async function getEmployeesWithMonthlyStatus(options?: {
     year,
   };
 }
-

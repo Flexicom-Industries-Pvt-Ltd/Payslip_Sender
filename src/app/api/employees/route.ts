@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getAuthSession } from '@/lib/auth';
 import { createEmployee, getEmployeesWithMonthlyStatus } from '@/lib/db-store';
 
 export async function GET(request: NextRequest) {
   try {
+    const session = await getAuthSession();
+    if (!session) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search') || undefined;
     const department = searchParams.get('department') || undefined;
@@ -11,6 +17,7 @@ export async function GET(request: NextRequest) {
     const statusFilter = (searchParams.get('statusFilter') as any) || undefined;
 
     const data = await getEmployeesWithMonthlyStatus({
+      workspaceId: session.workspaceId,
       search,
       department,
       month,
@@ -36,6 +43,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getAuthSession();
+    if (!session) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const { employeeId, name, email, department } = body;
 
@@ -60,12 +72,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const employee = await createEmployee({
-      employeeId,
-      name,
-      email,
-      department,
-    });
+    const employee = await createEmployee(
+      {
+        employeeId,
+        name,
+        email,
+        department,
+      },
+      session.workspaceId
+    );
 
     return NextResponse.json({ success: true, employee }, { status: 201 });
   } catch (err: any) {

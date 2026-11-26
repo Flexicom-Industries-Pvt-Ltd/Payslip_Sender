@@ -8,42 +8,79 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Workspace {
+  id             String   @id @default(cuid())
+  slug           String   @unique
+  name           String
+  legalName      String?
+  tagline        String?
+  passcode       String
+  logoUrl        String?
+  iconUrl        String?
+  heroImageUrl   String?
+  primaryColor   String   @default("#78B338")
+  hoverColor     String   @default("#689F2E")
+  lightColor     String   @default("#F2F8EA")
+  borderColor    String   @default("#D6EDBC")
+  textColor      String   @default("#3F6E15")
+  defaultSubject String?
+  defaultBody    String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  employees    Employee[]
+  dispatchLogs EmailDispatchLog[]
+  smtpConfig   SmtpConfig?
+
+  @@index([slug])
+}
+
 model Employee {
   id          String   @id @default(cuid())
-  employeeId  String   @unique
+  workspaceId String   @default("ws_sterling")
+  employeeId  String
   name        String
   email       String
   department  String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, employeeId])
+  @@index([workspaceId])
   @@index([employeeId])
   @@index([email])
   @@index([department])
 }
 
 model EmailDispatchLog {
-  id              String   @id @default(cuid())
-  employeeId      String
-  employeeName    String
-  email           String
-  month           String
-  year            String
-  status          String   // "SUCCESS" | "FAILED"
-  errorMessage    String?
-  sentAt          DateTime @default(now())
+  id             String   @id @default(cuid())
+  workspaceId    String   @default("ws_sterling")
+  employeeId     String
+  employeeName   String
+  email          String
+  month          String
+  year           String
+  status         String // "SUCCESS" | "FAILED"
+  errorMessage   String?
+  sentAt         DateTime @default(now())
 
-  messageId       String?
-  smtpHost        String?
-  smtpPort        Int?
-  fromAddress     String?
-  subject         String?
-  attachmentName  String?
-  attachmentSize  Int?
-  responseBody    String?
-  durationMs      Int?
-  rawDetails      String?
+  messageId      String?
+  smtpHost       String?
+  smtpPort       Int?
+  fromAddress    String?
+  subject        String?
+  attachmentName String?
+  attachmentSize Int?
+  responseBody   String?
+  durationMs     Int?
+  rawDetails     String?
 
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
   @@index([employeeId])
   @@index([month, year])
   @@index([status])
@@ -52,13 +89,15 @@ model EmailDispatchLog {
 }
 
 model SmtpConfig {
-  id        String   @id @default("default")
-  host      String
-  port      Int      @default(587)
-  user      String
-  password  String
-  from      String
-  secure    Boolean  @default(false)
-  updatedAt DateTime @updatedAt
-}
+  id          String   @id @default(cuid())
+  workspaceId String   @unique @default("ws_sterling")
+  host        String
+  port        Int      @default(587)
+  user        String
+  password    String
+  from        String
+  secure      Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
 
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}

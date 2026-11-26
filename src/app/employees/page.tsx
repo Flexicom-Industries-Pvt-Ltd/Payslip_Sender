@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
+import { useWorkspace } from '@/components/layout/workspace-context';
 import { Modal } from '@/components/ui/modal';
 import { Badge } from '@/components/ui/badge';
 import { MONTHS } from '@/lib/email-templates';
@@ -64,6 +65,7 @@ interface Employee {
 }
 
 export default function EmployeesPage() {
+  const { workspace } = useWorkspace();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -332,7 +334,7 @@ export default function EmployeesPage() {
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <List className="w-3.5 h-3.5 text-[#78B338]" />
+              <List className="w-3.5 h-3.5 text-brand" />
               <span>List View</span>
             </button>
             <button
@@ -344,14 +346,14 @@ export default function EmployeesPage() {
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <Table className="w-3.5 h-3.5 text-[#78B338]" />
+              <Table className="w-3.5 h-3.5 text-brand" />
               <span>12-Month Matrix</span>
             </button>
           </div>
 
           <a
             href="/api/employees/export?template=true"
-            download="Sterling_Distillers_Employee_Import_Template.xlsx"
+            download={`${(workspace.name || 'Company').replace(/[^a-zA-Z0-9]+/g, '_')}_Employee_Import_Template.xlsx`}
             className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors shadow-2xs"
             title="Download formatted Excel template with instructions and sample rows"
           >
@@ -386,7 +388,7 @@ export default function EmployeesPage() {
 
           <button
             onClick={handleOpenAdd}
-            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-[#78B338] rounded-lg hover:bg-[#689F2E] transition-colors shadow-xs cursor-pointer"
+            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-brand rounded-lg hover:bg-brand-hover transition-colors shadow-xs cursor-pointer"
           >
             <UserPlus className="w-3.5 h-3.5" />
             <span>Add Employee</span>
@@ -399,14 +401,14 @@ export default function EmployeesPage() {
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2 text-xs font-bold text-slate-700 uppercase tracking-wider">
-              <Calendar className="w-4 h-4 text-[#78B338]" />
+              <Calendar className="w-4 h-4 text-brand" />
               <span>Delivery Period:</span>
             </div>
             <div className="flex items-center gap-1.5">
               <select
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(e.target.value)}
-                className="px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 font-semibold focus:outline-hidden focus:ring-2 focus:ring-[#96D055]"
+                className="px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 font-semibold focus:outline-hidden focus:ring-2 focus:ring-brand"
               >
                 {MONTHS.map((m) => (
                   <option key={m} value={m}>
@@ -418,7 +420,7 @@ export default function EmployeesPage() {
               <select
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(e.target.value)}
-                className="px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 font-semibold focus:outline-hidden focus:ring-2 focus:ring-[#96D055]"
+                className="px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 font-semibold focus:outline-hidden focus:ring-2 focus:ring-brand"
               >
                 {['2024', '2025', '2026', '2027'].map((yr) => (
                   <option key={yr} value={yr}>
@@ -482,7 +484,7 @@ export default function EmployeesPage() {
 
             <Link
               href="/payslips"
-              className="ml-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#78B338] hover:bg-[#689F2E] text-white rounded-lg font-semibold shadow-2xs text-xs transition-colors"
+              className="ml-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand hover:bg-brand-hover text-white rounded-lg font-semibold shadow-2xs text-xs transition-colors"
             >
               <Send className="w-3.5 h-3.5" />
               <span>Distribute Payslips</span>
@@ -494,7 +496,7 @@ export default function EmployeesPage() {
         {activeMonths.length > 0 && (
           <div className="flex flex-wrap items-center gap-2 pt-2.5 border-t border-slate-100 text-xs">
             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1 mr-1">
-              <Sparkles className="w-3 h-3 text-[#78B338]" />
+              <Sparkles className="w-3 h-3 text-brand" />
               <span>Active Dispatched Months ({selectedYear}):</span>
             </span>
             {activeMonths.map((am) => {
@@ -509,8 +511,8 @@ export default function EmployeesPage() {
                   }}
                   className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
                     isSelected
-                      ? 'bg-[#78B338] text-white shadow-xs font-bold'
-                      : 'bg-[#F2F8EA] text-[#3F6E15] hover:bg-[#E4F3CE] border border-[#D6EDBC]'
+                      ? 'bg-brand text-white shadow-xs font-bold'
+                      : 'bg-brand-light text-brand-text hover:bg-[#E4F3CE] border border-brand-border'
                   }`}
                 >
                   <Check className="w-3 h-3" />
@@ -519,7 +521,7 @@ export default function EmployeesPage() {
                     className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
                       isSelected
                         ? 'bg-white/20 text-white'
-                        : 'bg-[#D6EDBC] text-[#2E2A2A]'
+                        : 'bg-brand-border text-[#2E2A2A]'
                     }`}
                   >
                     {am.sentCount} sent
@@ -540,7 +542,7 @@ export default function EmployeesPage() {
             placeholder="Search by name, ID, or email..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-[#96D055] focus:bg-white transition-all text-slate-800"
+            className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-brand focus:bg-white transition-all text-slate-800"
           />
           {search && (
             <button
@@ -558,7 +560,7 @@ export default function EmployeesPage() {
             <select
               value={departmentFilter}
               onChange={(e) => setDepartmentFilter(e.target.value)}
-              className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:outline-hidden focus:ring-2 focus:ring-[#96D055] font-medium"
+              className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:outline-hidden focus:ring-2 focus:ring-brand font-medium"
             >
               <option value="all">All Departments</option>
               {allDepartments.map((dept) => (
@@ -638,13 +640,13 @@ export default function EmployeesPage() {
                               <button
                                 type="button"
                                 onClick={() => handleOpenHistory(emp)}
-                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#F2F8EA] text-[#3F6E15] border border-[#D6EDBC] hover:bg-[#E4F3CE] transition-all cursor-pointer shadow-2xs"
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-brand-light text-brand-text border border-brand-border hover:bg-[#E4F3CE] transition-all cursor-pointer shadow-2xs"
                                 title="Click to view full delivery history"
                               >
-                                <Check className="w-3.5 h-3.5 text-[#78B338] stroke-[3]" />
+                                <Check className="w-3.5 h-3.5 text-brand stroke-[3]" />
                                 <span>Sent</span>
                                 {emp.lastSentAt && (
-                                  <span className="text-[10px] text-[#78B338] font-normal">
+                                  <span className="text-[10px] text-brand font-normal">
                                     (
                                     {new Date(emp.lastSentAt).toLocaleDateString([], {
                                       month: 'short',
@@ -676,7 +678,7 @@ export default function EmployeesPage() {
                               <button
                                 type="button"
                                 onClick={() => handleOpenHistory(emp)}
-                                className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-400 hover:text-[#78B338] transition-colors cursor-pointer"
+                                className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-400 hover:text-brand transition-colors cursor-pointer"
                                 title="View delivery history timeline"
                               >
                                 <History className="w-3 h-3 text-slate-400" />
@@ -690,7 +692,7 @@ export default function EmployeesPage() {
                             <button
                               type="button"
                               onClick={() => handleOpenHistory(emp)}
-                              className="p-1.5 text-slate-500 hover:text-[#78B338] hover:bg-[#F2F8EA] rounded-md transition-colors cursor-pointer"
+                              className="p-1.5 text-slate-500 hover:text-brand hover:bg-brand-light rounded-md transition-colors cursor-pointer"
                               title="View Payslip Delivery Timeline"
                             >
                               <History className="w-3.5 h-3.5" />
@@ -698,7 +700,7 @@ export default function EmployeesPage() {
                             <button
                               type="button"
                               onClick={() => handleOpenEdit(emp)}
-                              className="p-1.5 text-slate-500 hover:text-[#78B338] hover:bg-[#F2F8EA] rounded-md transition-colors cursor-pointer"
+                              className="p-1.5 text-slate-500 hover:text-brand hover:bg-brand-light rounded-md transition-colors cursor-pointer"
                               title="Edit Employee"
                             >
                               <Edit2 className="w-3.5 h-3.5" />
@@ -729,7 +731,7 @@ export default function EmployeesPage() {
           <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-slate-50/50">
             <div>
               <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <Table className="w-4 h-4 text-[#78B338]" />
+                <Table className="w-4 h-4 text-brand" />
                 <span>Annual 12-Month Payslip Distribution Matrix ({selectedYear})</span>
               </h3>
               <p className="text-[11px] text-slate-500">
@@ -742,7 +744,7 @@ export default function EmployeesPage() {
               <select
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(e.target.value)}
-                className="px-2.5 py-1 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 font-semibold focus:outline-hidden focus:ring-2 focus:ring-[#96D055]"
+                className="px-2.5 py-1 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 font-semibold focus:outline-hidden focus:ring-2 focus:ring-brand"
               >
                 {['2024', '2025', '2026', '2027'].map((yr) => (
                   <option key={yr} value={yr}>
@@ -770,7 +772,7 @@ export default function EmployeesPage() {
                     <th
                       key={m}
                       className={`py-3 px-2 text-center min-w-[50px] font-bold ${
-                        m === selectedMonth ? 'bg-[#F2F8EA] text-[#3F6E15]' : ''
+                        m === selectedMonth ? 'bg-brand-light text-brand-text' : ''
                       }`}
                     >
                       {m.slice(0, 3)}
@@ -809,7 +811,7 @@ export default function EmployeesPage() {
                             <td
                               key={m}
                               className={`py-2.5 px-1 text-center border-r border-slate-100 ${
-                                isCurrent ? 'bg-[#F2F8EA]/30' : ''
+                                isCurrent ? 'bg-brand-light/30' : ''
                               }`}
                             >
                               {st === 'SENT' ? (
@@ -817,7 +819,7 @@ export default function EmployeesPage() {
                                   type="button"
                                   onClick={() => handleOpenHistory(emp)}
                                   title={`${m} ${selectedYear}: Delivered`}
-                                  className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-[#F2F8EA] text-[#3F6E15] border border-[#D6EDBC] hover:scale-110 transition-transform cursor-pointer font-bold text-xs"
+                                  className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-brand-light text-brand-text border border-brand-border hover:scale-110 transition-transform cursor-pointer font-bold text-xs"
                                 >
                                   ✓
                                 </button>
@@ -840,10 +842,10 @@ export default function EmployeesPage() {
                           <button
                             type="button"
                             onClick={() => handleOpenHistory(emp)}
-                            className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-semibold text-slate-600 bg-slate-100 hover:bg-[#F2F8EA] hover:text-[#3F6E15] rounded-md transition-all cursor-pointer"
+                            className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-semibold text-slate-600 bg-slate-100 hover:bg-brand-light hover:text-brand-text rounded-md transition-all cursor-pointer"
                             title="View history"
                           >
-                            <History className="w-3 h-3 text-[#78B338]" />
+                            <History className="w-3 h-3 text-brand" />
                             <span>Details</span>
                           </button>
                         </td>
@@ -870,7 +872,7 @@ export default function EmployeesPage() {
                       return (
                         <td
                           key={m}
-                          className="py-2.5 px-1 text-center font-bold text-[#3F6E15] border-r border-slate-200"
+                          className="py-2.5 px-1 text-center font-bold text-brand-text border-r border-slate-200"
                         >
                           {countSent > 0 ? countSent : '—'}
                         </td>
@@ -912,7 +914,7 @@ export default function EmployeesPage() {
               placeholder="e.g. EMP105"
               value={formData.employeeId}
               onChange={(e) => setFormData({ ...formData, employeeId: e.target.value })}
-              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-[#96D055] focus:bg-white"
+              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-brand focus:bg-white"
             />
           </div>
 
@@ -926,7 +928,7 @@ export default function EmployeesPage() {
               placeholder="e.g. Sarah Connor"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-[#96D055] focus:bg-white"
+              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-brand focus:bg-white"
             />
           </div>
 
@@ -937,10 +939,10 @@ export default function EmployeesPage() {
             <input
               type="email"
               required
-              placeholder="e.g. sarah.connor@sterlingdistillers.com"
+              placeholder={`e.g. sarah.connor@${workspace.slug}.com`}
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-[#96D055] focus:bg-white"
+              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-brand focus:bg-white"
             />
           </div>
 
@@ -953,7 +955,7 @@ export default function EmployeesPage() {
               placeholder="e.g. Operations, Finance, Production"
               value={formData.department}
               onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-[#96D055] focus:bg-white"
+              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-brand focus:bg-white"
             />
           </div>
 
@@ -968,7 +970,7 @@ export default function EmployeesPage() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2 text-xs font-semibold text-white bg-[#78B338] hover:bg-[#689F2E] rounded-lg shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+              className="px-4 py-2 text-xs font-semibold text-white bg-brand hover:bg-brand-hover rounded-lg shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
             >
               {isSubmitting ? 'Saving...' : 'Create Employee'}
             </button>
@@ -1000,7 +1002,7 @@ export default function EmployeesPage() {
               required
               value={formData.employeeId}
               onChange={(e) => setFormData({ ...formData, employeeId: e.target.value })}
-              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-[#96D055] focus:bg-white"
+              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-brand focus:bg-white"
             />
           </div>
 
@@ -1013,7 +1015,7 @@ export default function EmployeesPage() {
               required
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-[#96D055] focus:bg-white"
+              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-brand focus:bg-white"
             />
           </div>
 
@@ -1026,7 +1028,7 @@ export default function EmployeesPage() {
               required
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-[#96D055] focus:bg-white"
+              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-brand focus:bg-white"
             />
           </div>
 
@@ -1038,7 +1040,7 @@ export default function EmployeesPage() {
               type="text"
               value={formData.department}
               onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-[#96D055] focus:bg-white"
+              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-brand focus:bg-white"
             />
           </div>
 
@@ -1053,7 +1055,7 @@ export default function EmployeesPage() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2 text-xs font-semibold text-white bg-[#78B338] hover:bg-[#689F2E] rounded-lg shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+              className="px-4 py-2 text-xs font-semibold text-white bg-brand hover:bg-brand-hover rounded-lg shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
             >
               {isSubmitting ? 'Updating...' : 'Save Changes'}
             </button>
@@ -1127,7 +1129,7 @@ export default function EmployeesPage() {
                 </div>
                 <div className="bg-white/80 p-2 rounded-lg border border-emerald-200/60">
                   <span className="text-slate-500 text-[11px] block">Existing Records Updated:</span>
-                  <span className="text-[#3F6E15] font-bold text-sm">
+                  <span className="text-brand-text font-bold text-sm">
                     {importSummary.updatedCount}
                   </span>
                 </div>
@@ -1141,10 +1143,10 @@ export default function EmployeesPage() {
           )}
 
           {/* STEP 1: Download Template Callout */}
-          <div className="p-3.5 bg-gradient-to-r from-[#F2F8EA] to-emerald-50 border border-[#D6EDBC] rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+          <div className="p-3.5 bg-gradient-to-r from-brand-light to-emerald-50 border border-brand-border rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
             <div className="space-y-0.5">
               <div className="text-xs font-bold text-[#2E2A2A] flex items-center gap-1.5">
-                <FileSpreadsheet className="w-4 h-4 text-[#78B338]" />
+                <FileSpreadsheet className="w-4 h-4 text-brand" />
                 <span>Step 1: Need the pre-formatted Excel template?</span>
               </div>
               <p className="text-[11px] text-[#4B4545] leading-relaxed">
@@ -1153,8 +1155,8 @@ export default function EmployeesPage() {
             </div>
             <a
               href="/api/employees/export?template=true"
-              download="Sterling_Distillers_Employee_Import_Template.xlsx"
-              className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#78B338] hover:bg-[#689F2E] text-white rounded-lg text-xs font-bold shadow-xs transition-colors cursor-pointer"
+              download={`${(workspace.name || 'Company').replace(/[^a-zA-Z0-9]+/g, '_')}_Employee_Import_Template.xlsx`}
+              className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand hover:bg-brand-hover text-white rounded-lg text-xs font-bold shadow-xs transition-colors cursor-pointer"
             >
               <Download className="w-3.5 h-3.5" />
               <span>Download Template</span>
@@ -1166,8 +1168,8 @@ export default function EmployeesPage() {
             <div className="text-xs font-bold text-slate-800 mb-1.5">
               Step 2: Upload Completed File (.xlsx, .xls, .csv)
             </div>
-            <div className="border-2 border-dashed border-slate-200 hover:border-[#96D055] rounded-xl p-5 text-center bg-slate-50/60 hover:bg-[#F2F8EA]/30 transition-all">
-              <FileSpreadsheet className="w-8 h-8 text-[#78B338] mx-auto mb-1.5" />
+            <div className="border-2 border-dashed border-slate-200 hover:border-brand rounded-xl p-5 text-center bg-slate-50/60 hover:bg-brand-light/30 transition-all">
+              <FileSpreadsheet className="w-8 h-8 text-brand mx-auto mb-1.5" />
               <div className="text-xs font-semibold text-slate-800">
                 {importFile ? importFile.name : 'Select or drag your filled spreadsheet here'}
               </div>
@@ -1184,7 +1186,7 @@ export default function EmployeesPage() {
                     setImportFile(e.target.files[0]);
                   }
                 }}
-                className="mt-2.5 text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-[#F2F8EA] file:text-[#3F6E15] hover:file:bg-[#E4F3CE] cursor-pointer"
+                className="mt-2.5 text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-brand-light file:text-brand-text hover:file:bg-[#E4F3CE] cursor-pointer"
               />
             </div>
           </div>
@@ -1225,7 +1227,7 @@ export default function EmployeesPage() {
             <button
               type="submit"
               disabled={!importFile || importLoading}
-              className="px-4 py-2 text-xs font-semibold text-white bg-[#78B338] hover:bg-[#689F2E] rounded-lg shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+              className="px-4 py-2 text-xs font-semibold text-white bg-brand hover:bg-brand-hover rounded-lg shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
             >
               {importLoading ? 'Processing...' : 'Upload & Import Employees'}
             </button>
@@ -1357,7 +1359,7 @@ export default function EmployeesPage() {
               </button>
               <Link
                 href="/payslips"
-                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-[#78B338] hover:bg-[#689F2E] rounded-xl shadow-xs transition-all whitespace-nowrap cursor-pointer shrink-0"
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-brand hover:bg-brand-hover rounded-xl shadow-xs transition-all whitespace-nowrap cursor-pointer shrink-0"
               >
                 <Send className="w-3.5 h-3.5" />
                 <span>Send Payslip Now</span>

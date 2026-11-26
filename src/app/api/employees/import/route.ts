@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as XLSX from 'xlsx';
+import { getAuthSession } from '@/lib/auth';
 import { bulkUpsertEmployees } from '@/lib/db-store';
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getAuthSession();
+    if (!session) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
 
@@ -37,12 +43,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Helper to find matching column value regardless of case, punctuation, or annotations like "(Required)"
     const normalizeHeader = (header: string) => {
       return header
         .toLowerCase()
-        .replace(/\(.*?\)/g, '') // remove (Required), (Optional), etc.
-        .replace(/[^a-z0-9]/g, ''); // keep only alphanumeric
+        .replace(/\(.*?\)/g, '')
+        .replace(/[^a-z0-9]/g, '');
     };
 
     const findField = (row: Record<string, any>, candidateKeys: string[]): string => {
@@ -58,7 +63,6 @@ export async function POST(request: NextRequest) {
       return '';
     };
 
-    // Find the best sheet that contains employee data
     let targetSheetName = workbook.SheetNames[0];
     for (const sheetName of workbook.SheetNames) {
       const lower = sheetName.toLowerCase();
@@ -68,7 +72,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Parse the selected sheet
     const sheet = workbook.Sheets[targetSheetName];
     const rawRows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: '' });
 
@@ -121,7 +124,6 @@ export async function POST(request: NextRequest) {
         'Unit',
       ]);
 
-      // Skip non-data rows or instruction rows (e.g., headers or placeholders)
       if (
         employeeId.includes('---') ||
         employeeId.toLowerCase().includes('example') ||
@@ -130,7 +132,6 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      // If at least an employee ID or name is provided, include for processing
       if (employeeId || name || email) {
         parsedRecords.push({
           employeeId,
@@ -152,7 +153,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await bulkUpsertEmployees(parsedRecords);
+    const result = await bulkUpsertEmployees(parsedRecords, session.workspaceId);
 
     return NextResponse.json({
       success: true,

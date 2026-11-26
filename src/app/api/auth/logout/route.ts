@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { clearAuthSession, isAuthenticated } from '@/lib/auth';
+import { clearAuthSession, getAuthSession } from '@/lib/auth';
 
 export async function POST() {
   await clearAuthSession();
@@ -7,7 +7,10 @@ export async function POST() {
 }
 
 export async function GET() {
-  const auth = await isAuthenticated();
-  return NextResponse.json({ authenticated: auth });
+  const session = await getAuthSession();
+  return NextResponse.json({
+    authenticated: session !== null,
+    role: session?.role || null,
+    workspaceId: session?.workspaceId || null,
+  });
 }
-

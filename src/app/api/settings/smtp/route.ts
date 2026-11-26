@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSMTPConfigStatus, saveStoredSMTPConfig, verifySMTPConnection } from '@/lib/mailer';
+import { getAuthSession } from '@/lib/auth';
+import { getSMTPConfigStatus, saveStoredSMTPConfig } from '@/lib/mailer';
 
 export async function GET() {
   try {
-    const status = await getSMTPConfigStatus();
+    const session = await getAuthSession();
+    if (!session) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const status = await getSMTPConfigStatus(session.workspaceId);
     return NextResponse.json({ success: true, smtp: status });
   } catch (err: any) {
     return NextResponse.json(
@@ -15,6 +21,11 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getAuthSession();
+    if (!session) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const { host, port, user, password, from, secure } = body;
 
@@ -32,14 +43,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const updatedStatus = await saveStoredSMTPConfig({
-      host,
-      port: Number(port) || 587,
-      user,
-      password,
-      from: from || user,
-      secure: Boolean(secure),
-    });
+    const updatedStatus = await saveStoredSMTPConfig(
+      {
+        host,
+        port: Number(port) || 587,
+        user,
+        password,
+        from: from || user,
+        secure: Boolean(secure),
+      },
+      session.workspaceId
+    );
 
     return NextResponse.json({
       success: true,
@@ -53,4 +67,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

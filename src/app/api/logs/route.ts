@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getAuthSession } from '@/lib/auth';
 import { getEnterpriseAuditLogs } from '@/lib/db-store';
 
 export async function GET(request: NextRequest) {
   try {
+    const session = await getAuthSession();
+    if (!session) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search') || '';
     const statusParam = searchParams.get('status') || 'ALL';
@@ -14,6 +20,7 @@ export async function GET(request: NextRequest) {
     const offset = Math.max(Number(searchParams.get('offset')) || 0, 0);
 
     const data = await getEnterpriseAuditLogs({
+      workspaceId: session.workspaceId,
       search,
       status,
       month: month && month !== 'ALL' ? month : undefined,
@@ -36,4 +43,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-

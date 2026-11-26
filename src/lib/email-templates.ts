@@ -3,11 +3,14 @@ export interface EmailTemplateVariables {
   employee_id: string;
   month: string;
   year: string;
+  company_name?: string;
 }
 
 export const DEFAULT_EMAIL_SUBJECT = 'Salary Slip – {{month}} {{year}}';
 
-export const DEFAULT_EMAIL_BODY = `Dear {{employee_name}},
+export function buildDefaultEmailBody(companyName?: string | null): string {
+  const signature = companyName?.trim() || 'Human Resources Department';
+  return `Dear {{employee_name}},
 
 Please find attached your salary slip for {{month}} {{year}}.
 
@@ -15,7 +18,10 @@ Should you have any queries regarding your salary, please contact the HR departm
 
 Regards,
 Human Resources Department
-Sterling Distillers Private Limited`;
+${signature}`;
+}
+
+export const DEFAULT_EMAIL_BODY = buildDefaultEmailBody('Sterling Distillers Private Limited');
 
 export const AVAILABLE_VARIABLES = [
   {
@@ -48,7 +54,8 @@ export function interpolateTemplate(
     .replace(/\{\{\s*employee_name\s*\}\}/g, variables.employee_name || '')
     .replace(/\{\{\s*employee_id\s*\}\}/g, variables.employee_id || '')
     .replace(/\{\{\s*month\s*\}\}/g, variables.month || '')
-    .replace(/\{\{\s*year\s*\}\}/g, variables.year || '');
+    .replace(/\{\{\s*year\s*\}\}/g, variables.year || '')
+    .replace(/\{\{\s*company_name\s*\}\}/g, variables.company_name || '');
 }
 
 export const MONTHS = [
@@ -65,4 +72,3 @@ export const MONTHS = [
   'November',
   'December',
 ];
-

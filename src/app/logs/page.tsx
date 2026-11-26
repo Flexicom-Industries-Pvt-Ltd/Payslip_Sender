@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
+import { useWorkspace } from '@/components/layout/workspace-context';
 import {
   ScrollText,
   Search,
@@ -74,6 +75,7 @@ const MONTHS = [
 const YEARS = ['All', '2026', '2025', '2024'];
 
 export default function EnterpriseLogsPage() {
+  const { workspace } = useWorkspace();
   const [logs, setLogs] = useState<AuditLogRecord[]>([]);
   const [metrics, setMetrics] = useState<LogMetrics>({
     totalDispatches: 0,
@@ -173,9 +175,10 @@ export default function EnterpriseLogsPage() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
+    const fileSlug = (workspace.name || 'Company').replace(/[^a-zA-Z0-9]+/g, '_');
     link.setAttribute(
       'download',
-      `Sterling_Payslip_Audit_Log_${new Date().toISOString().slice(0, 10)}.csv`
+      `${fileSlug}_Payslip_Audit_Log_${new Date().toISOString().slice(0, 10)}.csv`
     );
     document.body.appendChild(link);
     link.click();
@@ -197,9 +200,9 @@ export default function EnterpriseLogsPage() {
       },
       delivery: {
         latencyMs: selectedLog.durationMs || null,
-        smtpHost: selectedLog.smtpHost || 'smtppro.zoho.in',
-        smtpPort: selectedLog.smtpPort || 465,
-        from: selectedLog.fromAddress || 'Tech Team <tech@plascom.in>',
+        smtpHost: selectedLog.smtpHost || null,
+        smtpPort: selectedLog.smtpPort || null,
+        from: selectedLog.fromAddress || null,
         messageId: selectedLog.messageId || null,
         response: selectedLog.responseBody || null,
       },
@@ -234,7 +237,7 @@ export default function EnterpriseLogsPage() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-              <ScrollText className="w-5 h-5 text-[#78B338]" />
+              <ScrollText className="w-5 h-5 text-brand" />
               <span>Audit Logs</span>
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
@@ -249,7 +252,7 @@ export default function EnterpriseLogsPage() {
               disabled={refreshing}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 shadow-2xs transition-all cursor-pointer"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-[#78B338]' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-brand' : ''}`} />
               <span>Refresh</span>
             </button>
 
@@ -321,7 +324,7 @@ export default function EnterpriseLogsPage() {
               placeholder="Search by name, ID, email, message ID..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg bg-slate-50/70 border border-slate-200/80 focus:outline-hidden focus:ring-1 focus:ring-[#78B338] focus:bg-white text-slate-900"
+              className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg bg-slate-50/70 border border-slate-200/80 focus:outline-hidden focus:ring-1 focus:ring-brand focus:bg-white text-slate-900"
             />
           </div>
 
@@ -410,7 +413,7 @@ export default function EnterpriseLogsPage() {
                   <tr>
                     <td colSpan={7} className="py-12 text-center text-slate-400">
                       <div className="flex items-center justify-center gap-2">
-                        <RefreshCw className="w-4 h-4 animate-spin text-[#78B338]" />
+                        <RefreshCw className="w-4 h-4 animate-spin text-brand" />
                         <span>Loading audit logs...</span>
                       </div>
                     </td>
@@ -662,7 +665,7 @@ export default function EnterpriseLogsPage() {
                     <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
                       <div className="text-[11px] font-medium text-slate-400">SMTP Host</div>
                       <div className="text-sm font-semibold text-slate-900 font-mono mt-0.5 truncate">
-                        {selectedLog.smtpHost || 'smtppro.zoho.in'}
+                        {selectedLog.smtpHost || '—'}
                       </div>
                     </div>
                   </div>
@@ -694,7 +697,7 @@ export default function EnterpriseLogsPage() {
                     <div className="px-4 py-3 flex items-center justify-between">
                       <span className="text-slate-500 font-medium">Sender (From)</span>
                       <span className="font-mono text-slate-800">
-                        {selectedLog.fromAddress || 'Tech Team <tech@plascom.in>'}
+                        {selectedLog.fromAddress || '—'}
                       </span>
                     </div>
 

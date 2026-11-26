@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getAuthSession } from '@/lib/auth';
 import { updateEmployee, deleteEmployee, getEmployeeById } from '@/lib/db-store';
 
 export async function GET(
@@ -6,8 +7,13 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getAuthSession();
+    if (!session) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { id } = await params;
-    const employee = await getEmployeeById(id);
+    const employee = await getEmployeeById(id, session.workspaceId);
     if (!employee) {
       return NextResponse.json(
         { success: false, error: 'Employee not found' },
@@ -28,6 +34,11 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getAuthSession();
+    if (!session) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { id } = await params;
     const body = await request.json();
     const { employeeId, name, email, department } = body;
@@ -39,12 +50,16 @@ export async function PUT(
       );
     }
 
-    const updated = await updateEmployee(id, {
-      employeeId,
-      name,
-      email,
-      department,
-    });
+    const updated = await updateEmployee(
+      id,
+      {
+        employeeId,
+        name,
+        email,
+        department,
+      },
+      session.workspaceId
+    );
 
     return NextResponse.json({ success: true, employee: updated });
   } catch (err: any) {
@@ -60,8 +75,13 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getAuthSession();
+    if (!session) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { id } = await params;
-    const deleted = await deleteEmployee(id);
+    const deleted = await deleteEmployee(id, session.workspaceId);
     return NextResponse.json({ success: true, employee: deleted });
   } catch (err: any) {
     return NextResponse.json(
@@ -70,4 +90,3 @@ export async function DELETE(
     );
   }
 }
-

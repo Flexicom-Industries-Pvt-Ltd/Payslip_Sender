@@ -1,12 +1,18 @@
 @import "tailwindcss";
 
-@theme {
-  --color-sterling-green: #96D055;
-  --color-sterling-green-dark: #78B338;
-  --color-sterling-green-hover: #689F2E;
-  --color-sterling-green-light: #F2F8EA;
-  --color-sterling-green-border: #D6EDBC;
-  --color-sterling-green-text: #3F6E15;
+@theme inline {
+  --color-brand: var(--brand-primary);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-light: var(--brand-light);
+  --color-brand-border: var(--brand-border);
+  --color-brand-text: var(--brand-text);
+
+  --color-sterling-green: var(--brand-primary);
+  --color-sterling-green-dark: var(--brand-primary);
+  --color-sterling-green-hover: var(--brand-hover);
+  --color-sterling-green-light: var(--brand-light);
+  --color-sterling-green-border: var(--brand-border);
+  --color-sterling-green-text: var(--brand-text);
   --color-sterling-charcoal: #4B4545;
   --color-sterling-dark: #221E1E;
   --color-sterling-dark-border: #332D2D;
@@ -14,16 +20,22 @@
 }
 
 :root {
+  --brand-primary: #78B338;
+  --brand-hover: #689F2E;
+  --brand-light: #F2F8EA;
+  --brand-border: #D6EDBC;
+  --brand-text: #3F6E15;
+
   --background: #F9FAF6;
   --foreground: #2E2A2A;
   --card: #ffffff;
   --card-foreground: #2E2A2A;
-  --primary: #78B338;
+  --primary: var(--brand-primary);
   --primary-foreground: #ffffff;
   --muted: #F2F4E9;
   --muted-foreground: #737577;
   --border: #E8EAE1;
-  --ring: #96D055;
+  --ring: var(--brand-primary);
 }
 
 body {

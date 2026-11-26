@@ -1,10 +1,16 @@
 import { NextResponse } from 'next/server';
+import { getAuthSession } from '@/lib/auth';
 import { getSMTPConfigStatus } from '@/lib/mailer';
 import { getDatabaseStatus } from '@/lib/db-store';
 
 export async function GET() {
   try {
-    const smtp = await getSMTPConfigStatus();
+    const session = await getAuthSession();
+    if (!session) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const smtp = await getSMTPConfigStatus(session.workspaceId);
     const db = await getDatabaseStatus();
 
     return NextResponse.json({
@@ -19,4 +25,3 @@ export async function GET() {
     );
   }
 }
-

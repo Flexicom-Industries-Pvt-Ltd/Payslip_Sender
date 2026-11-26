@@ -7,7 +7,12 @@ import {
   getDashboardStats,
   logEmailDispatch,
   getEmployeesWithMonthlyStatus,
+  createWorkspace,
+  getWorkspaceBySlug,
+  deleteWorkspace,
+  getEnterpriseAuditLogs,
 } from '../src/lib/db-store';
+import { deriveThemePalette } from '../src/lib/theme-utils';
 import {
   saveStoredSMTPConfig,
   getSMTPConfigStatus,
@@ -187,6 +192,7 @@ async function runTestSuite() {
   const testEmployees = [
     {
       id: 'e1',
+      workspaceId: 'ws_sterling',
       employeeId: 'EMP001',
       name: 'Sarah Connor',
       email: 'sarah.connor@example.com',
@@ -196,6 +202,7 @@ async function runTestSuite() {
     },
     {
       id: 'e2',
+      workspaceId: 'ws_sterling',
       employeeId: 'EMP002',
       name: 'John Miller',
       email: 'john.miller@example.com',
@@ -205,6 +212,7 @@ async function runTestSuite() {
     },
     {
       id: 'e3',
+      workspaceId: 'ws_sterling',
       employeeId: 'EMP003',
       name: 'Elena Rostova',
       email: 'elena.rostova@example.com',
@@ -214,6 +222,7 @@ async function runTestSuite() {
     },
     {
       id: 'e4',
+      workspaceId: 'ws_sterling',
       employeeId: 'EMP004',
       name: 'Michael Davis',
       email: 'michael.davis@example.com',
@@ -540,6 +549,86 @@ async function runTestSuite() {
       secure: preTestSmtp.secure,
     });
   }
+
+  // ----------------- TEST SUITE 8: MULTI-TENANT WORKSPACE ISOLATION -----------------
+  console.log('\n🏢 Suite 8: Multi-Tenant Workspace Isolation & Dynamic Branding');
+
+  const tenantSlug = `acme-test-${Date.now()}`;
+  const tenantWs = await createWorkspace({
+    name: 'Acme Biofuels',
+    slug: tenantSlug,
+    legalName: 'Acme Biofuels Ltd.',
+    passcode: 'acme9999',
+    primaryColor: '#2563EB',
+  });
+
+  const fetchedTenant = await getWorkspaceBySlug(tenantSlug);
+  assert(
+    fetchedTenant?.id === tenantWs.id && fetchedTenant.primaryColor === '#2563EB',
+    'Create and fetch custom branded workspace with color theme'
+  );
+
+  const customPalette = deriveThemePalette('#8B5CF6');
+  assert(
+    customPalette.primaryColor === '#8B5CF6' &&
+      customPalette.lightColor.startsWith('#') &&
+      customPalette.hoverColor.startsWith('#'),
+    'Dynamic theme palette derives hover and tint tokens from any custom hex color'
+  );
+
+  // Create EMP001 inside Tenant B — must NOT collide with ws_sterling
+  const tenantEmp = await createEmployee(
+    {
+      employeeId: 'EMP001',
+      name: 'Alice TenantB',
+      email: 'alice@acme.com',
+      department: 'Logistics',
+    },
+    tenantWs.id
+  );
+  assert(
+    tenantEmp.workspaceId === tenantWs.id && tenantEmp.employeeId === 'EMP001',
+    'Same Employee ID (EMP001) allowed across isolated company workspaces'
+  );
+
+  const sterlingEmps = await getEmployees({ search: 'Alice TenantB' }, 'ws_sterling');
+  assert(
+    sterlingEmps.length === 0,
+    'Tenant B employee strictly invisible inside Sterling workspace'
+  );
+
+  // Isolated SMTP check for Tenant B
+  const tenantSmtpInitial = await getSMTPConfigStatus(tenantWs.id);
+  assert(
+    tenantSmtpInitial.isConfigured === false,
+    'New workspace starts with isolated unconfigured SMTP (no leakage from default workspace)'
+  );
+
+  // Isolated Audit Log check
+  await logEmailDispatch({
+    workspaceId: tenantWs.id,
+    employeeId: 'EMP001',
+    employeeName: 'Alice TenantB',
+    email: 'alice@acme.com',
+    month: 'November',
+    year: '2026',
+    status: 'SUCCESS',
+  });
+
+  const tenantLogs = await getEnterpriseAuditLogs({ workspaceId: tenantWs.id });
+  const sterlingLogsFiltered = await getEnterpriseAuditLogs({
+    workspaceId: 'ws_sterling',
+    search: 'Alice TenantB',
+  });
+  assert(
+    tenantLogs.totalCount === 1 && sterlingLogsFiltered.totalCount === 0,
+    'Dispatch audit logs strictly isolated per workspace'
+  );
+
+  // Cleanup test workspace
+  await deleteWorkspace(tenantWs.id);
+  const deletedCheck = await getWorkspaceBySlug(tenantSlug);
+  assert(deletedCheck === null, 'Delete workspace cleanly removes tenant and scoped data');
 
   // Summary
   console.log('\n====================================================');
