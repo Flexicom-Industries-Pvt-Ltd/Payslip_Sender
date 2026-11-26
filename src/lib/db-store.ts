@@ -430,6 +430,18 @@ export async function getWorkspaceBySlug(slug: string): Promise<WorkspaceRecord 
   return list.find((w) => w.slug.toLowerCase() === clean) || null;
 }
 
+const MAX_LOGO_STRING_LENGTH = 24000;
+
+function validateCompactImageField(value: string | null | undefined, label: string): string | null {
+  const trimmed = value?.trim() || null;
+  if (trimmed && trimmed.length > MAX_LOGO_STRING_LENGTH) {
+    throw new Error(
+      `${label} exceeds the compact database limit (${Math.round(MAX_LOGO_STRING_LENGTH / 1024)} KB). Please re-upload through the built-in optimizer.`
+    );
+  }
+  return trimmed;
+}
+
 export async function createWorkspace(data: {
   name: string;
   slug?: string;
@@ -458,6 +470,9 @@ export async function createWorkspace(data: {
   const palette = deriveThemePalette(data.primaryColor || '#2563EB');
   const defaultSubject = data.defaultSubject?.trim() || DEFAULT_EMAIL_SUBJECT;
   const defaultBody = data.defaultBody?.trim() || buildDefaultEmailBody(legalName);
+  const logoUrl = validateCompactImageField(data.logoUrl, 'Company Logo');
+  const iconUrl = validateCompactImageField(data.iconUrl, 'Collapsed Icon') || logoUrl;
+  const heroImageUrl = validateCompactImageField(data.heroImageUrl, 'Hero Image');
 
   const isNeon = await isNeonPostgresActive();
   if (isNeon) {
@@ -469,9 +484,9 @@ export async function createWorkspace(data: {
           legalName,
           tagline: data.tagline?.trim() || null,
           passcode,
-          logoUrl: data.logoUrl || null,
-          iconUrl: data.iconUrl || data.logoUrl || null,
-          heroImageUrl: data.heroImageUrl || null,
+          logoUrl,
+          iconUrl,
+          heroImageUrl,
           primaryColor: palette.primaryColor,
           hoverColor: palette.hoverColor,
           lightColor: palette.lightColor,
@@ -503,9 +518,9 @@ export async function createWorkspace(data: {
     legalName,
     tagline: data.tagline?.trim() || null,
     passcode,
-    logoUrl: data.logoUrl || null,
-    iconUrl: data.iconUrl || data.logoUrl || null,
-    heroImageUrl: data.heroImageUrl || null,
+    logoUrl,
+    iconUrl,
+    heroImageUrl,
     primaryColor: palette.primaryColor,
     hoverColor: palette.hoverColor,
     lightColor: palette.lightColor,
@@ -563,9 +578,15 @@ export async function updateWorkspace(
     }
     updatePayload.passcode = data.passcode.trim();
   }
-  if (data.logoUrl !== undefined) updatePayload.logoUrl = data.logoUrl || null;
-  if (data.iconUrl !== undefined) updatePayload.iconUrl = data.iconUrl || null;
-  if (data.heroImageUrl !== undefined) updatePayload.heroImageUrl = data.heroImageUrl || null;
+  if (data.logoUrl !== undefined) {
+    updatePayload.logoUrl = validateCompactImageField(data.logoUrl, 'Company Logo');
+  }
+  if (data.iconUrl !== undefined) {
+    updatePayload.iconUrl = validateCompactImageField(data.iconUrl, 'Collapsed Icon');
+  }
+  if (data.heroImageUrl !== undefined) {
+    updatePayload.heroImageUrl = validateCompactImageField(data.heroImageUrl, 'Hero Image');
+  }
   if (data.defaultSubject !== undefined) updatePayload.defaultSubject = data.defaultSubject || null;
   if (data.defaultBody !== undefined) updatePayload.defaultBody = data.defaultBody || null;
   if (data.isActive !== undefined) updatePayload.isActive = Boolean(data.isActive);

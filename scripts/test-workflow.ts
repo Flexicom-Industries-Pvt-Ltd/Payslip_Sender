@@ -625,6 +625,23 @@ async function runTestSuite() {
     'Dispatch audit logs strictly isolated per workspace'
   );
 
+  // Guardrail check: reject oversized raw image data to protect Neon DB space
+  let rejectedLargeLogo = false;
+  try {
+    await createWorkspace({
+      name: 'Bloated Logo Co',
+      slug: `bloated-${Date.now()}`,
+      passcode: 'test1234',
+      logoUrl: 'data:image/png;base64,' + 'A'.repeat(30000),
+    });
+  } catch {
+    rejectedLargeLogo = true;
+  }
+  assert(
+    rejectedLargeLogo,
+    'Workspace creation rejects bloated unoptimized logos exceeding compact DB quota'
+  );
+
   // Cleanup test workspace
   await deleteWorkspace(tenantWs.id);
   const deletedCheck = await getWorkspaceBySlug(tenantSlug);

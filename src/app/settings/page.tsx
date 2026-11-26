@@ -5,6 +5,7 @@ import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { useWorkspace } from '@/components/layout/workspace-context';
 import { Badge } from '@/components/ui/badge';
 import { THEME_PRESETS, deriveThemePalette } from '@/lib/theme-utils';
+import { compressLogoToTinyBase64 } from '@/lib/image-optimizer';
 import {
   Mail,
   CheckCircle2,
@@ -32,42 +33,6 @@ interface SMTPFormData {
   password: string;
   from: string;
   secure: boolean;
-}
-
-function readImageAsDataUrl(file: File, maxDimension = 420): Promise<string> {
-  return new Promise((resolve, reject) => {
-    if (file.type === 'image/svg+xml') {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result || ''));
-      reader.onerror = () => reject(new Error('Failed to read SVG file'));
-      reader.readAsDataURL(file);
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      const img = new Image();
-      img.onload = () => {
-        const scale = Math.min(1, maxDimension / Math.max(img.width, img.height));
-        const width = Math.max(1, Math.round(img.width * scale));
-        const height = Math.max(1, Math.round(img.height * scale));
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          resolve(String(reader.result || ''));
-          return;
-        }
-        ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/png', 0.9));
-      };
-      img.onerror = () => resolve(String(reader.result || ''));
-      img.src = String(reader.result || '');
-    };
-    reader.onerror = () => reject(new Error('Failed to read image file'));
-    reader.readAsDataURL(file);
-  });
 }
 
 export default function SettingsPage() {
@@ -294,13 +259,14 @@ export default function SettingsPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const dataUrl = await readImageAsDataUrl(file, field === 'iconUrl' ? 160 : 420);
+      const kind = field === 'iconUrl' ? 'icon' : 'logo';
+      const optimized = await compressLogoToTinyBase64(file, kind);
       setBrandForm((prev) => ({
         ...prev,
-        [field]: dataUrl,
+        [field]: optimized.dataUrl,
       }));
     } catch (err: any) {
-      setBrandError(err.message || 'Failed to read image');
+      setBrandError(err.message || 'Failed to compress image');
     }
   };
 

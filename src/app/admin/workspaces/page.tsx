@@ -6,6 +6,7 @@ import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { useWorkspace } from '@/components/layout/workspace-context';
 import { Modal } from '@/components/ui/modal';
 import { THEME_PRESETS, deriveThemePalette, slugifyWorkspaceName } from '@/lib/theme-utils';
+import { compressLogoToTinyBase64 } from '@/lib/image-optimizer';
 import { buildDefaultEmailBody, DEFAULT_EMAIL_SUBJECT } from '@/lib/email-templates';
 import {
   Building2,
@@ -78,42 +79,6 @@ const EMPTY_FORM: WorkspaceFormState = {
   defaultBody: '',
   isActive: true,
 };
-
-function readImageAsDataUrl(file: File, maxDimension = 420): Promise<string> {
-  return new Promise((resolve, reject) => {
-    if (file.type === 'image/svg+xml') {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result || ''));
-      reader.onerror = () => reject(new Error('Failed to read SVG file'));
-      reader.readAsDataURL(file);
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      const img = new Image();
-      img.onload = () => {
-        const scale = Math.min(1, maxDimension / Math.max(img.width, img.height));
-        const width = Math.max(1, Math.round(img.width * scale));
-        const height = Math.max(1, Math.round(img.height * scale));
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          resolve(String(reader.result || ''));
-          return;
-        }
-        ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/png', 0.9));
-      };
-      img.onerror = () => resolve(String(reader.result || ''));
-      img.src = String(reader.result || '');
-    };
-    reader.onerror = () => reject(new Error('Failed to read image file'));
-    reader.readAsDataURL(file);
-  });
-}
 
 export default function AdminWorkspacesPage() {
   const router = useRouter();
@@ -196,14 +161,20 @@ export default function AdminWorkspacesPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const dataUrl = await readImageAsDataUrl(file, field === 'iconUrl' ? 160 : 420);
+      const kind = field === 'iconUrl' ? 'icon' : 'logo';
+      const optimized = await compressLogoToTinyBase64(file, kind);
+      let autoIconUrl: string | undefined;
+      if (field === 'logoUrl' && !form.iconUrl) {
+        const iconOptimized = await compressLogoToTinyBase64(file, 'icon');
+        autoIconUrl = iconOptimized.dataUrl;
+      }
       setForm((prev) => ({
         ...prev,
-        [field]: dataUrl,
-        ...(field === 'logoUrl' && !prev.iconUrl ? { iconUrl: dataUrl } : {}),
+        [field]: optimized.dataUrl,
+        ...(autoIconUrl && !prev.iconUrl ? { iconUrl: autoIconUrl } : {}),
       }));
     } catch (err: any) {
-      setFormError(err.message || 'Failed to read uploaded image');
+      setFormError(err.message || 'Failed to compress uploaded image');
     }
   };
 
@@ -708,7 +679,11 @@ export default function AdminWorkspacesPage() {
               <input
                 type="text"
                 placeholder="Or paste image URL (e.g. /logo.png)"
-                value={form.logoUrl.startsWith('data:') ? '(Uploaded Image Ready)' : form.logoUrl}
+                value={
+                  form.logoUrl.startsWith('data:')
+                    ? `Optimized WebP (${(form.logoUrl.length / 1024).toFixed(1)} KB)`
+                    : form.logoUrl
+                }
                 onChange={(e) => setForm({ ...form, logoUrl: e.target.value })}
                 className="w-full px-2.5 py-1.5 text-[11px] bg-white border border-slate-200 rounded-lg focus:outline-hidden"
               />
@@ -731,7 +706,11 @@ export default function AdminWorkspacesPage() {
               <input
                 type="text"
                 placeholder="Optional square emblem (defaults to logo)"
-                value={form.iconUrl.startsWith('data:') ? '(Uploaded Icon Ready)' : form.iconUrl}
+                value={
+                  form.iconUrl.startsWith('data:')
+                    ? `Optimized WebP (${(form.iconUrl.length / 1024).toFixed(1)} KB)`
+                    : form.iconUrl
+                }
                 onChange={(e) => setForm({ ...form, iconUrl: e.target.value })}
                 className="w-full px-2.5 py-1.5 text-[11px] bg-white border border-slate-200 rounded-lg focus:outline-hidden"
               />
