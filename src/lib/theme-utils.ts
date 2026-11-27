@@ -235,6 +235,33 @@ export function buildMonogramFaviconSvg(name: string, bgHex: string = '#2563EB')
   return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 }
 
+export function buildWorkspaceCssText(ws: {
+  primaryColor?: string | null;
+  secondaryColor?: string | null;
+  hoverColor?: string | null;
+  lightColor?: string | null;
+  borderColor?: string | null;
+  textColor?: string | null;
+}): string {
+  const primary = deriveThemePalette(ws.primaryColor || '#0F172A');
+  const secondary = deriveSecondaryPalette(ws.secondaryColor || '#FFFFFF');
+
+  return `:root {
+  --brand-primary: ${ws.primaryColor || primary.primaryColor};
+  --brand-hover: ${ws.hoverColor || primary.hoverColor};
+  --brand-light: ${ws.lightColor || primary.lightColor};
+  --brand-border: ${ws.borderColor || primary.borderColor};
+  --brand-text: ${ws.textColor || primary.textColor};
+  --sidebar-bg: ${secondary.sidebarBg};
+  --sidebar-border: ${secondary.sidebarBorder};
+  --sidebar-hover: ${secondary.sidebarHover};
+  --sidebar-surface: ${secondary.sidebarSurface};
+  --sidebar-text: ${secondary.sidebarText};
+  --sidebar-text-hover: ${secondary.sidebarTextHover};
+  --sidebar-muted: ${secondary.sidebarMuted};
+}`;
+}
+
 export function slugifyWorkspaceName(input: string): string {
   return input
     .toLowerCase()

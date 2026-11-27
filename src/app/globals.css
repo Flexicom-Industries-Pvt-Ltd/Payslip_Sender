@@ -13,36 +13,37 @@
   --color-sterling-green-light: var(--brand-light);
   --color-sterling-green-border: var(--brand-border);
   --color-sterling-green-text: var(--brand-text);
-  --color-sterling-charcoal: #4B4545;
+  --color-sterling-charcoal: #475569;
   --color-sterling-dark: var(--sidebar-bg);
   --color-sterling-dark-border: var(--sidebar-border);
-  --color-sterling-cream: #F9FAF6;
+  --color-sterling-cream: #F8FAFC;
 }
 
+/* Neutral multi-tenant root defaults (overridden on SSR per active workspace) */
 :root {
-  --brand-primary: #78B338;
-  --brand-hover: #689F2E;
-  --brand-light: #F2F8EA;
-  --brand-border: #D6EDBC;
-  --brand-text: #3F6E15;
+  --brand-primary: #0F172A;
+  --brand-hover: #1E293B;
+  --brand-light: #F1F5F9;
+  --brand-border: #CBD5E1;
+  --brand-text: #0F172A;
 
-  --sidebar-bg: #221E1E;
-  --sidebar-border: #332D2D;
-  --sidebar-hover: #342F2F;
-  --sidebar-surface: #2C2727;
-  --sidebar-text: #D6D3D1;
-  --sidebar-text-hover: #FFFFFF;
-  --sidebar-muted: #A8A29E;
+  --sidebar-bg: #FFFFFF;
+  --sidebar-border: #E2E8F0;
+  --sidebar-hover: #F1F5F9;
+  --sidebar-surface: #F8FAFC;
+  --sidebar-text: #334155;
+  --sidebar-text-hover: #0F172A;
+  --sidebar-muted: #64748B;
 
-  --background: #F9FAF6;
-  --foreground: #2E2A2A;
+  --background: #F8FAFC;
+  --foreground: #0F172A;
   --card: #ffffff;
-  --card-foreground: #2E2A2A;
+  --card-foreground: #0F172A;
   --primary: var(--brand-primary);
   --primary-foreground: #ffffff;
-  --muted: #F2F4E9;
-  --muted-foreground: #737577;
-  --border: #E8EAE1;
+  --muted: #F1F5F9;
+  --muted-foreground: #64748B;
+  --border: #E2E8F0;
   --ring: var(--brand-primary);
 }
 

@@ -67,12 +67,12 @@ const NEUTRAL_INITIAL_WORKSPACE: WorkspaceBranding = {
   logoUrl: null,
   iconUrl: null,
   heroImageUrl: null,
-  primaryColor: '#78B338',
-  secondaryColor: '#221E1E',
-  hoverColor: '#689F2E',
-  lightColor: '#F2F8EA',
-  borderColor: '#D6EDBC',
-  textColor: '#3F6E15',
+  primaryColor: '#0F172A',
+  secondaryColor: '#FFFFFF',
+  hoverColor: '#1E293B',
+  lightColor: '#F1F5F9',
+  borderColor: '#CBD5E1',
+  textColor: '#0F172A',
   defaultSubject: DEFAULT_EMAIL_SUBJECT,
   defaultBody: buildDefaultEmailBody('Human Resources Department'),
   isActive: true,
@@ -101,8 +101,8 @@ export function applyWorkspaceCssTheme(
 ) {
   if (typeof document === 'undefined') return;
   const root = document.documentElement.style;
-  const primaryPalette = deriveThemePalette(ws.primaryColor || '#78B338');
-  const secondaryPalette = deriveSecondaryPalette(ws.secondaryColor || '#221E1E');
+  const primaryPalette = deriveThemePalette(ws.primaryColor || '#0F172A');
+  const secondaryPalette = deriveSecondaryPalette(ws.secondaryColor || '#FFFFFF');
 
   root.setProperty('--brand-primary', ws.primaryColor || primaryPalette.primaryColor);
   root.setProperty('--brand-hover', ws.hoverColor || primaryPalette.hoverColor);
@@ -160,16 +160,56 @@ export function applyManifestToDocument(workspaceSlug?: string | null) {
   }
 }
 
-export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
+interface WorkspaceProviderProps {
+  children: React.ReactNode;
+  initialWorkspace?: WorkspaceBranding | null;
+  initialRole?: 'SUPER_ADMIN' | 'COMPANY_ADMIN' | null;
+  initialAvailableWorkspaces?: WorkspaceSummary[];
+}
+
+export function WorkspaceProvider({
+  children,
+  initialWorkspace = null,
+  initialRole = null,
+  initialAvailableWorkspaces = [],
+}: WorkspaceProviderProps) {
   const pathname = usePathname();
-  const [workspace, setWorkspace] = useState<WorkspaceBranding>(NEUTRAL_INITIAL_WORKSPACE);
-  const [role, setRole] = useState<'SUPER_ADMIN' | 'COMPANY_ADMIN' | null>(null);
-  const [availableWorkspaces, setAvailableWorkspaces] = useState<WorkspaceSummary[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [workspace, setWorkspace] = useState<WorkspaceBranding>(
+    initialWorkspace || NEUTRAL_INITIAL_WORKSPACE
+  );
+  const [role, setRole] = useState<'SUPER_ADMIN' | 'COMPANY_ADMIN' | null>(initialRole);
+  const [availableWorkspaces, setAvailableWorkspaces] = useState<WorkspaceSummary[]>(
+    initialAvailableWorkspaces
+  );
+  const [loading, setLoading] = useState(!initialWorkspace);
   const [switching, setSwitching] = useState(false);
 
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalledApp, setIsInstalledApp] = useState(false);
+
+  const applyBrandingToDocument = useCallback((ws: WorkspaceBranding) => {
+    applyWorkspaceCssTheme(ws);
+    if (typeof document !== 'undefined') {
+      document.title = `${ws.name} | Employee Payslip Distribution System`;
+      const resolvedIcon =
+        ws.iconUrl || ws.logoUrl || buildMonogramFaviconSvg(ws.name, ws.primaryColor);
+      applyFaviconToDocument(resolvedIcon);
+      applyManifestToDocument(ws.slug);
+    }
+  }, []);
+
+  // Keep client state synced with updated SSR props (e.g. right after login or router.refresh())
+  useEffect(() => {
+    if (initialWorkspace) {
+      setWorkspace(initialWorkspace);
+      setRole(initialRole);
+      setAvailableWorkspaces(initialAvailableWorkspaces);
+      setLoading(false);
+      if (!pathname?.startsWith('/login') && !pathname?.startsWith('/admin/login')) {
+        applyBrandingToDocument(initialWorkspace);
+      }
+    }
+  }, [initialWorkspace, initialRole, initialAvailableWorkspaces, pathname, applyBrandingToDocument]);
 
   // Register lightweight Service Worker + capture browser install prompt + standalone detection
   useEffect(() => {
@@ -223,19 +263,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     }
   }, [deferredPrompt]);
 
-  const applyBrandingToDocument = useCallback((ws: WorkspaceBranding) => {
-    applyWorkspaceCssTheme(ws);
-    if (typeof document !== 'undefined') {
-      document.title = `${ws.name} | Employee Payslip Distribution System`;
-      const resolvedIcon =
-        ws.iconUrl || ws.logoUrl || buildMonogramFaviconSvg(ws.name, ws.primaryColor);
-      applyFaviconToDocument(resolvedIcon);
-      applyManifestToDocument(ws.slug);
-    }
-  }, []);
-
   const refreshWorkspace = useCallback(async () => {
-    if (pathname?.startsWith('/login')) {
+    if (pathname?.startsWith('/login') || pathname?.startsWith('/admin/login')) {
       setLoading(false);
       return;
     }
@@ -259,8 +288,11 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   }, [pathname, applyBrandingToDocument]);
 
   useEffect(() => {
-    refreshWorkspace();
-  }, [refreshWorkspace]);
+    // Only fetch on mount if SSR didn't already populate this workspace, or when transitioning off login
+    if (!initialWorkspace && !pathname?.startsWith('/login') && !pathname?.startsWith('/admin/login')) {
+      refreshWorkspace();
+    }
+  }, [initialWorkspace, pathname, refreshWorkspace]);
 
   const switchWorkspace = useCallback(
     async (workspaceId: string) => {

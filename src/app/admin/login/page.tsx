@@ -45,8 +45,7 @@ export default function SuperAdminLoginPage() {
         return;
       }
 
-      router.push('/admin/workspaces');
-      router.refresh();
+      window.location.assign('/admin/workspaces');
     } catch {
       setError('Connection error occurred while signing in');
       setLoading(false);
