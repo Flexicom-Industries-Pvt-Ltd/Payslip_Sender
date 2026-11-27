@@ -4,8 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { useWorkspace } from '@/components/layout/workspace-context';
 import { Badge } from '@/components/ui/badge';
-import { THEME_PRESETS, deriveThemePalette } from '@/lib/theme-utils';
 import { compressLogoToTinyBase64 } from '@/lib/image-optimizer';
+import { ColorThemePicker } from '@/components/ui/color-theme-picker';
 import {
   Mail,
   CheckCircle2,
@@ -82,6 +82,7 @@ export default function SettingsPage() {
     logoUrl: workspace.logoUrl || '',
     iconUrl: workspace.iconUrl || '',
     primaryColor: workspace.primaryColor || '#78B338',
+    secondaryColor: workspace.secondaryColor || '#221E1E',
   });
   const [savingBrand, setSavingBrand] = useState(false);
   const [brandMessage, setBrandMessage] = useState('');
@@ -95,6 +96,7 @@ export default function SettingsPage() {
       logoUrl: workspace.logoUrl || '',
       iconUrl: workspace.iconUrl || '',
       primaryColor: workspace.primaryColor || '#78B338',
+      secondaryColor: workspace.secondaryColor || '#221E1E',
     });
   }, [workspace]);
 
@@ -261,9 +263,15 @@ export default function SettingsPage() {
     try {
       const kind = field === 'iconUrl' ? 'icon' : 'logo';
       const optimized = await compressLogoToTinyBase64(file, kind);
+      let autoIconUrl: string | undefined;
+      if (field === 'logoUrl' && !brandForm.iconUrl) {
+        const iconOpt = await compressLogoToTinyBase64(file, 'icon');
+        autoIconUrl = iconOpt.dataUrl;
+      }
       setBrandForm((prev) => ({
         ...prev,
         [field]: optimized.dataUrl,
+        ...(autoIconUrl && !prev.iconUrl ? { iconUrl: autoIconUrl } : {}),
       }));
     } catch (err: any) {
       setBrandError(err.message || 'Failed to compress image');
@@ -296,8 +304,6 @@ export default function SettingsPage() {
       setSavingBrand(false);
     }
   };
-
-  const previewPalette = deriveThemePalette(brandForm.primaryColor);
 
   return (
     <DashboardShell>
@@ -840,57 +846,24 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200/80 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-700">Primary Brand Color Theme</span>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={brandForm.primaryColor}
-                    onChange={(e) => setBrandForm({ ...brandForm, primaryColor: e.target.value })}
-                    className="w-7 h-7 rounded cursor-pointer border border-slate-300 bg-white p-0.5"
-                  />
-                  <input
-                    type="text"
-                    value={brandForm.primaryColor}
-                    onChange={(e) => setBrandForm({ ...brandForm, primaryColor: e.target.value })}
-                    className="w-20 px-2 py-1 text-[11px] font-mono bg-white border border-slate-200 rounded-lg uppercase"
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                {THEME_PRESETS.map((preset) => {
-                  const selected =
-                    brandForm.primaryColor.toUpperCase() === preset.primaryColor.toUpperCase();
-                  return (
-                    <button
-                      key={preset.name}
-                      type="button"
-                      onClick={() => setBrandForm({ ...brandForm, primaryColor: preset.primaryColor })}
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-all cursor-pointer ${
-                        selected
-                          ? 'bg-white border-slate-900 text-slate-900 shadow-2xs'
-                          : 'bg-white/70 border-slate-200 text-slate-600 hover:bg-white'
-                      }`}
-                    >
-                      <span
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: preset.primaryColor }}
-                      />
-                      <span>{preset.name}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            <ColorThemePicker
+              primaryColor={brandForm.primaryColor}
+              secondaryColor={brandForm.secondaryColor}
+              companyName={brandForm.name || workspace.name}
+              logoUrl={brandForm.logoUrl}
+              iconUrl={brandForm.iconUrl}
+              onPrimaryChange={(hex) => setBrandForm((prev) => ({ ...prev, primaryColor: hex }))}
+              onSecondaryChange={(hex) =>
+                setBrandForm((prev) => ({ ...prev, secondaryColor: hex }))
+              }
+            />
 
             <div className="flex justify-end pt-4 border-t border-slate-100">
               <button
                 type="submit"
                 disabled={savingBrand}
                 className="inline-flex items-center gap-2 px-5 py-2.5 text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer disabled:opacity-60"
-                style={{ backgroundColor: previewPalette.primaryColor }}
+                style={{ backgroundColor: brandForm.primaryColor }}
               >
                 <Save className="w-3.5 h-3.5" />
                 <span>{savingBrand ? 'Saving Branding...' : 'Save Branding & Apply Theme'}</span>

@@ -19,6 +19,7 @@ model Workspace {
   iconUrl        String?
   heroImageUrl   String?
   primaryColor   String   @default("#78B338")
+  secondaryColor String   @default("#221E1E")
   hoverColor     String   @default("#689F2E")
   lightColor     String   @default("#F2F8EA")
   borderColor    String   @default("#D6EDBC")

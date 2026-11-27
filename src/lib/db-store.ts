@@ -17,6 +17,7 @@ export interface WorkspaceRecord {
   iconUrl: string | null;
   heroImageUrl: string | null;
   primaryColor: string;
+  secondaryColor: string;
   hoverColor: string;
   lightColor: string;
   borderColor: string;
@@ -38,6 +39,7 @@ export interface WorkspacePublicBranding {
   iconUrl: string | null;
   heroImageUrl: string | null;
   primaryColor: string;
+  secondaryColor: string;
   hoverColor: string;
   lightColor: string;
   borderColor: string;
@@ -125,6 +127,7 @@ function getDefaultSterlingWorkspace(): WorkspaceRecord {
     iconUrl: '/sterling-favicon.png',
     heroImageUrl: '/sterling-project-1.jpg',
     primaryColor: '#78B338',
+    secondaryColor: '#221E1E',
     hoverColor: '#689F2E',
     lightColor: '#F2F8EA',
     borderColor: '#D6EDBC',
@@ -286,6 +289,7 @@ export function toPublicWorkspaceBranding(w: WorkspaceRecord): WorkspacePublicBr
     iconUrl: w.iconUrl,
     heroImageUrl: w.heroImageUrl,
     primaryColor: w.primaryColor,
+    secondaryColor: w.secondaryColor || '#221E1E',
     hoverColor: w.hoverColor,
     lightColor: w.lightColor,
     borderColor: w.borderColor,
@@ -321,6 +325,7 @@ export async function ensureDefaultWorkspace(): Promise<WorkspaceRecord> {
           iconUrl: def.iconUrl,
           heroImageUrl: def.heroImageUrl,
           primaryColor: def.primaryColor,
+          secondaryColor: def.secondaryColor,
           hoverColor: def.hoverColor,
           lightColor: def.lightColor,
           borderColor: def.borderColor,
@@ -452,6 +457,7 @@ export async function createWorkspace(data: {
   iconUrl?: string | null;
   heroImageUrl?: string | null;
   primaryColor?: string;
+  secondaryColor?: string;
   defaultSubject?: string | null;
   defaultBody?: string | null;
 }): Promise<WorkspaceRecord> {
@@ -468,6 +474,7 @@ export async function createWorkspace(data: {
 
   const legalName = data.legalName?.trim() || name;
   const palette = deriveThemePalette(data.primaryColor || '#2563EB');
+  const secondaryColor = (data.secondaryColor || '#221E1E').trim().toUpperCase();
   const defaultSubject = data.defaultSubject?.trim() || DEFAULT_EMAIL_SUBJECT;
   const defaultBody = data.defaultBody?.trim() || buildDefaultEmailBody(legalName);
   const logoUrl = validateCompactImageField(data.logoUrl, 'Company Logo');
@@ -488,6 +495,7 @@ export async function createWorkspace(data: {
           iconUrl,
           heroImageUrl,
           primaryColor: palette.primaryColor,
+          secondaryColor,
           hoverColor: palette.hoverColor,
           lightColor: palette.lightColor,
           borderColor: palette.borderColor,
@@ -522,6 +530,7 @@ export async function createWorkspace(data: {
     iconUrl,
     heroImageUrl,
     primaryColor: palette.primaryColor,
+    secondaryColor,
     hoverColor: palette.hoverColor,
     lightColor: palette.lightColor,
     borderColor: palette.borderColor,
@@ -549,6 +558,7 @@ export async function updateWorkspace(
     iconUrl?: string | null;
     heroImageUrl?: string | null;
     primaryColor?: string;
+    secondaryColor?: string;
     defaultSubject?: string | null;
     defaultBody?: string | null;
     isActive?: boolean;
@@ -598,6 +608,9 @@ export async function updateWorkspace(
     updatePayload.lightColor = palette.lightColor;
     updatePayload.borderColor = palette.borderColor;
     updatePayload.textColor = palette.textColor;
+  }
+  if (data.secondaryColor) {
+    updatePayload.secondaryColor = data.secondaryColor.trim().toUpperCase();
   }
 
   const isNeon = await isNeonPostgresActive();

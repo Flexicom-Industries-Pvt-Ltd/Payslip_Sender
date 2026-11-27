@@ -6,6 +6,17 @@ export interface WorkspaceThemePalette {
   textColor: string;
 }
 
+export interface SecondaryThemePalette {
+  sidebarBg: string;
+  sidebarBorder: string;
+  sidebarHover: string;
+  sidebarSurface: string;
+  sidebarText: string;
+  sidebarTextHover: string;
+  sidebarMuted: string;
+  isDark: boolean;
+}
+
 export const THEME_PRESETS: Array<{ name: string } & WorkspaceThemePalette> = [
   {
     name: 'Sterling Green',
@@ -73,6 +84,17 @@ export const THEME_PRESETS: Array<{ name: string } & WorkspaceThemePalette> = [
   },
 ];
 
+export const SECONDARY_THEME_PRESETS: Array<{ name: string; color: string }> = [
+  { name: 'Obsidian Charcoal', color: '#221E1E' },
+  { name: 'Midnight Navy', color: '#0F172A' },
+  { name: 'Deep Indigo', color: '#1E1B4B' },
+  { name: 'Forest Pine', color: '#132A1B' },
+  { name: 'Graphite Zinc', color: '#18181B' },
+  { name: 'Burgundy Dark', color: '#2C1219' },
+  { name: 'Clean White', color: '#FFFFFF' },
+  { name: 'Cool Mist', color: '#F1F5F9' },
+];
+
 function clampByte(n: number): number {
   return Math.max(0, Math.min(255, Math.round(n)));
 }
@@ -110,8 +132,7 @@ function darken(rgb: { r: number; g: number; b: number }, ratio: number): string
 }
 
 /**
- * Generates a cohesive 5-token palette from any primary hex color.
- * Preserves exact hand-tuned tokens for known presets.
+ * Generates a cohesive 5-token primary palette from any hex color.
  */
 export function deriveThemePalette(primaryHex: string): WorkspaceThemePalette {
   const normalized = primaryHex.trim().toUpperCase();
@@ -144,6 +165,74 @@ export function deriveThemePalette(primaryHex: string): WorkspaceThemePalette {
     borderColor: mixWithWhite(rgb, 0.68),
     textColor: darken(rgb, 0.35),
   };
+}
+
+/**
+ * Generates contrast-aware sidebar & shell surface tokens from any secondary hex color.
+ * Automatically switches text & borders cleanly for both dark and white/light sidebars.
+ */
+export function deriveSecondaryPalette(secondaryHex?: string | null): SecondaryThemePalette {
+  const normalized = (secondaryHex || '#221E1E').trim().toUpperCase();
+  if (normalized === '#221E1E') {
+    return {
+      sidebarBg: '#221E1E',
+      sidebarBorder: '#332D2D',
+      sidebarHover: '#342F2F',
+      sidebarSurface: '#2C2727',
+      sidebarText: '#D6D3D1',
+      sidebarTextHover: '#FFFFFF',
+      sidebarMuted: '#A8A29E',
+      isDark: true,
+    };
+  }
+
+  const rgb = parseHex(normalized);
+  if (!rgb) {
+    return deriveSecondaryPalette('#221E1E');
+  }
+
+  const luminance = 0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b;
+  const isDark = luminance < 145;
+
+  if (isDark) {
+    return {
+      sidebarBg: normalized.startsWith('#') ? normalized : `#${normalized}`,
+      sidebarBorder: mixWithWhite(rgb, 0.1),
+      sidebarHover: mixWithWhite(rgb, 0.12),
+      sidebarSurface: mixWithWhite(rgb, 0.06),
+      sidebarText: '#E2E8F0',
+      sidebarTextHover: '#FFFFFF',
+      sidebarMuted: '#94A3B8',
+      isDark: true,
+    };
+  }
+
+  // Light / White sidebar
+  return {
+    sidebarBg: normalized.startsWith('#') ? normalized : `#${normalized}`,
+    sidebarBorder: darken(rgb, 0.11),
+    sidebarHover: darken(rgb, 0.06),
+    sidebarSurface: darken(rgb, 0.04),
+    sidebarText: '#334155',
+    sidebarTextHover: '#0F172A',
+    sidebarMuted: '#64748B',
+    isDark: false,
+  };
+}
+
+export function buildMonogramFaviconSvg(name: string, bgHex: string = '#2563EB'): string {
+  const initials =
+    (name || 'HR')
+      .trim()
+      .split(/\s+/)
+      .map((w) => w[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase() || 'HR';
+
+  const safeColor = /^#[0-9a-fA-F]{6}$/.test(bgHex.trim()) ? bgHex.trim() : '#2563EB';
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="${safeColor}"/><text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="26" font-weight="700">${initials}</text></svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 }
 
 export function slugifyWorkspaceName(input: string): string {

@@ -13,17 +13,18 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
+const NEUTRAL_DEFAULT_ICON =
+  'data:image/svg+xml,' +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#0F172A"/><text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="24" font-weight="700">HR</text></svg>'
+  );
+
 export const metadata: Metadata = {
   title: 'Employee Payslip Distribution Portal',
   description:
     'Multi-Tenant Enterprise HR Payslip & Salary Slip Distribution System.',
   icons: {
-    icon: [
-      { url: '/favicon.ico', sizes: 'any' },
-      { url: '/icon.png', type: 'image/png', sizes: '512x512' },
-    ],
-    shortcut: '/favicon.ico',
-    apple: '/apple-icon.png',
+    icon: [{ url: NEUTRAL_DEFAULT_ICON, type: 'image/svg+xml' }],
   },
 };
 

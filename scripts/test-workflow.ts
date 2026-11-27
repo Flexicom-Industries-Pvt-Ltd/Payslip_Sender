@@ -12,7 +12,7 @@ import {
   deleteWorkspace,
   getEnterpriseAuditLogs,
 } from '../src/lib/db-store';
-import { deriveThemePalette } from '../src/lib/theme-utils';
+import { deriveThemePalette, deriveSecondaryPalette, buildMonogramFaviconSvg } from '../src/lib/theme-utils';
 import {
   saveStoredSMTPConfig,
   getSMTPConfigStatus,
@@ -560,20 +560,27 @@ async function runTestSuite() {
     legalName: 'Acme Biofuels Ltd.',
     passcode: 'acme9999',
     primaryColor: '#2563EB',
+    secondaryColor: '#0F172A',
   });
 
   const fetchedTenant = await getWorkspaceBySlug(tenantSlug);
   assert(
-    fetchedTenant?.id === tenantWs.id && fetchedTenant.primaryColor === '#2563EB',
-    'Create and fetch custom branded workspace with color theme'
+    fetchedTenant?.id === tenantWs.id &&
+      fetchedTenant.primaryColor === '#2563EB' &&
+      fetchedTenant.secondaryColor === '#0F172A',
+    'Create and fetch custom branded workspace with primary and secondary color theme'
   );
 
   const customPalette = deriveThemePalette('#8B5CF6');
+  const lightSidebar = deriveSecondaryPalette('#FFFFFF');
+  const darkSidebar = deriveSecondaryPalette('#0F172A');
+  const monogramIcon = buildMonogramFaviconSvg('Acme Biofuels', '#2563EB');
   assert(
     customPalette.primaryColor === '#8B5CF6' &&
-      customPalette.lightColor.startsWith('#') &&
-      customPalette.hoverColor.startsWith('#'),
-    'Dynamic theme palette derives hover and tint tokens from any custom hex color'
+      lightSidebar.isDark === false &&
+      darkSidebar.isDark === true &&
+      monogramIcon.startsWith('data:image/svg+xml,'),
+    'Dynamic primary/secondary palettes derive contrast-aware sidebar tokens and monogram tab icon'
   );
 
   // Create EMP001 inside Tenant B — must NOT collide with ws_sterling

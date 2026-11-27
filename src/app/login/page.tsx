@@ -13,7 +13,11 @@ import {
   Building2,
 } from 'lucide-react';
 import type { WorkspaceBranding } from '@/components/layout/workspace-context';
-import { applyWorkspaceCssTheme } from '@/components/layout/workspace-context';
+import {
+  applyFaviconToDocument,
+  applyWorkspaceCssTheme,
+} from '@/components/layout/workspace-context';
+import { buildMonogramFaviconSvg } from '@/lib/theme-utils';
 
 function LoginPageInner() {
   const router = useRouter();
@@ -35,6 +39,8 @@ function LoginPageInner() {
     if (!urlSlug) {
       setBrandedWorkspace(null);
       setLoadingBrand(false);
+      document.title = 'Enterprise Payslip Portal | Sign In';
+      applyFaviconToDocument(buildMonogramFaviconSvg('HR', '#0F172A'));
       return;
     }
 
@@ -48,6 +54,11 @@ function LoginPageInner() {
           setBrandedWorkspace(data.workspace);
           applyWorkspaceCssTheme(data.workspace);
           document.title = `${data.workspace.name} | HR Portal Sign In`;
+          const iconHref =
+            data.workspace.iconUrl ||
+            data.workspace.logoUrl ||
+            buildMonogramFaviconSvg(data.workspace.name, data.workspace.primaryColor);
+          applyFaviconToDocument(iconHref);
         } else {
           setBrandedWorkspace(null);
         }

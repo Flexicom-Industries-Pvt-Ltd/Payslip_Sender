@@ -3,6 +3,11 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { DEFAULT_EMAIL_SUBJECT, buildDefaultEmailBody } from '@/lib/email-templates';
+import {
+  buildMonogramFaviconSvg,
+  deriveSecondaryPalette,
+  deriveThemePalette,
+} from '@/lib/theme-utils';
 
 export interface WorkspaceBranding {
   id: string;
@@ -14,6 +19,7 @@ export interface WorkspaceBranding {
   iconUrl: string | null;
   heroImageUrl: string | null;
   primaryColor: string;
+  secondaryColor: string;
   hoverColor: string;
   lightColor: string;
   borderColor: string;
@@ -28,6 +34,7 @@ export interface WorkspaceSummary {
   slug: string;
   name: string;
   primaryColor: string;
+  secondaryColor?: string;
   iconUrl: string | null;
   logoUrl: string | null;
   isActive: boolean;
@@ -43,27 +50,28 @@ interface WorkspaceContextValue {
   switchWorkspace: (workspaceId: string) => Promise<void>;
 }
 
-const FALLBACK_WORKSPACE: WorkspaceBranding = {
-  id: 'ws_sterling',
-  slug: 'sterling-distillers',
-  name: 'Sterling Distillers',
-  legalName: 'Sterling Distillers Private Limited',
-  tagline: 'Purba Bardhaman Plant • West Bengal',
-  logoUrl: '/sterling-logo.jpg',
-  iconUrl: '/sterling-favicon.png',
-  heroImageUrl: '/sterling-project-1.jpg',
+const NEUTRAL_INITIAL_WORKSPACE: WorkspaceBranding = {
+  id: '',
+  slug: 'company',
+  name: 'HR Portal',
+  legalName: 'Enterprise Payroll Portal',
+  tagline: null,
+  logoUrl: null,
+  iconUrl: null,
+  heroImageUrl: null,
   primaryColor: '#78B338',
+  secondaryColor: '#221E1E',
   hoverColor: '#689F2E',
   lightColor: '#F2F8EA',
   borderColor: '#D6EDBC',
   textColor: '#3F6E15',
   defaultSubject: DEFAULT_EMAIL_SUBJECT,
-  defaultBody: buildDefaultEmailBody('Sterling Distillers Private Limited'),
+  defaultBody: buildDefaultEmailBody('Human Resources Department'),
   isActive: true,
 };
 
 const WorkspaceContext = createContext<WorkspaceContextValue>({
-  workspace: FALLBACK_WORKSPACE,
+  workspace: NEUTRAL_INITIAL_WORKSPACE,
   role: null,
   availableWorkspaces: [],
   loading: true,
@@ -73,23 +81,55 @@ const WorkspaceContext = createContext<WorkspaceContextValue>({
 });
 
 export function applyWorkspaceCssTheme(
-  ws: Pick<
-    WorkspaceBranding,
-    'primaryColor' | 'hoverColor' | 'lightColor' | 'borderColor' | 'textColor'
+  ws: Partial<
+    Pick<
+      WorkspaceBranding,
+      'primaryColor' | 'secondaryColor' | 'hoverColor' | 'lightColor' | 'borderColor' | 'textColor'
+    >
   >
 ) {
   if (typeof document === 'undefined') return;
   const root = document.documentElement.style;
-  root.setProperty('--brand-primary', ws.primaryColor || '#78B338');
-  root.setProperty('--brand-hover', ws.hoverColor || '#689F2E');
-  root.setProperty('--brand-light', ws.lightColor || '#F2F8EA');
-  root.setProperty('--brand-border', ws.borderColor || '#D6EDBC');
-  root.setProperty('--brand-text', ws.textColor || '#3F6E15');
+  const primaryPalette = deriveThemePalette(ws.primaryColor || '#78B338');
+  const secondaryPalette = deriveSecondaryPalette(ws.secondaryColor || '#221E1E');
+
+  root.setProperty('--brand-primary', ws.primaryColor || primaryPalette.primaryColor);
+  root.setProperty('--brand-hover', ws.hoverColor || primaryPalette.hoverColor);
+  root.setProperty('--brand-light', ws.lightColor || primaryPalette.lightColor);
+  root.setProperty('--brand-border', ws.borderColor || primaryPalette.borderColor);
+  root.setProperty('--brand-text', ws.textColor || primaryPalette.textColor);
+
+  root.setProperty('--sidebar-bg', secondaryPalette.sidebarBg);
+  root.setProperty('--sidebar-border', secondaryPalette.sidebarBorder);
+  root.setProperty('--sidebar-hover', secondaryPalette.sidebarHover);
+  root.setProperty('--sidebar-surface', secondaryPalette.sidebarSurface);
+  root.setProperty('--sidebar-text', secondaryPalette.sidebarText);
+  root.setProperty('--sidebar-text-hover', secondaryPalette.sidebarTextHover);
+  root.setProperty('--sidebar-muted', secondaryPalette.sidebarMuted);
+}
+
+/**
+ * Replaces ALL existing favicon/icon links in <head> so static default icons never override the active company's tab icon.
+ */
+export function applyFaviconToDocument(iconHref: string) {
+  if (typeof document === 'undefined' || !iconHref) return;
+
+  const existing = document.head.querySelectorAll(
+    "link[rel='icon'], link[rel='shortcut icon'], link[rel='apple-touch-icon']"
+  );
+  existing.forEach((node) => node.remove());
+
+  for (const rel of ['icon', 'shortcut icon', 'apple-touch-icon']) {
+    const link = document.createElement('link');
+    link.rel = rel;
+    link.href = iconHref;
+    document.head.appendChild(link);
+  }
 }
 
 export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const [workspace, setWorkspace] = useState<WorkspaceBranding>(FALLBACK_WORKSPACE);
+  const [workspace, setWorkspace] = useState<WorkspaceBranding>(NEUTRAL_INITIAL_WORKSPACE);
   const [role, setRole] = useState<'SUPER_ADMIN' | 'COMPANY_ADMIN' | null>(null);
   const [availableWorkspaces, setAvailableWorkspaces] = useState<WorkspaceSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -99,16 +139,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     applyWorkspaceCssTheme(ws);
     if (typeof document !== 'undefined') {
       document.title = `${ws.name} | Employee Payslip Distribution System`;
-      const iconHref = ws.iconUrl || ws.logoUrl;
-      if (iconHref) {
-        let link: HTMLLinkElement | null = document.querySelector("link[rel~='icon']");
-        if (!link) {
-          link = document.createElement('link');
-          link.rel = 'icon';
-          document.head.appendChild(link);
-        }
-        link.href = iconHref;
-      }
+      const resolvedIcon =
+        ws.iconUrl || ws.logoUrl || buildMonogramFaviconSvg(ws.name, ws.primaryColor);
+      applyFaviconToDocument(resolvedIcon);
     }
   }, []);
 

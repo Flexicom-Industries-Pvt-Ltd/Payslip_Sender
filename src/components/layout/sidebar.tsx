@@ -97,16 +97,16 @@ export function Sidebar() {
       <aside
         className={`${
           isCollapsed ? 'w-20' : 'w-64'
-        } bg-[#221E1E] text-stone-300 flex flex-col shrink-0 border-r border-[#332D2D] select-none transition-all duration-300 ease-in-out relative`}
+        } bg-[var(--sidebar-bg)] text-[var(--sidebar-text)] flex flex-col shrink-0 border-r border-[var(--sidebar-border)] select-none transition-all duration-300 ease-in-out relative`}
       >
         {/* Brand Header */}
         <div
           className={`h-20 flex items-center ${
             isCollapsed ? 'px-2 justify-center' : 'px-4 justify-between'
-          } border-b border-[#332D2D] transition-all`}
+          } border-b border-[var(--sidebar-border)] transition-all`}
         >
           {isCollapsed ? (
-            <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center shadow-xs p-1.5 transition-all overflow-hidden">
+            <div className="w-11 h-11 bg-white rounded-xl border border-black/10 flex items-center justify-center shadow-xs p-1.5 transition-all overflow-hidden">
               {collapsedImg ? (
                 <img
                   src={collapsedImg}
@@ -120,7 +120,7 @@ export function Sidebar() {
               )}
             </div>
           ) : (
-            <div className="w-full bg-white rounded-lg px-2.5 py-1.5 flex items-center justify-center shadow-xs transition-all min-h-[48px] overflow-hidden">
+            <div className="w-full bg-white rounded-lg border border-black/10 px-2.5 py-1.5 flex items-center justify-center shadow-xs transition-all min-h-[48px] overflow-hidden">
               {expandedImg ? (
                 <img
                   src={expandedImg}
@@ -148,7 +148,7 @@ export function Sidebar() {
               type="button"
               onClick={() => setShowSwitcher((prev) => !prev)}
               disabled={switching}
-              className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-[#2C2727] hover:bg-[#352F2F] border border-[#3E3737] text-xs text-stone-200 transition-colors cursor-pointer"
+              className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-[var(--sidebar-surface)] hover:bg-[var(--sidebar-hover)] border border-[var(--sidebar-border)] text-xs text-[var(--sidebar-text)] transition-colors cursor-pointer"
             >
               <div className="flex items-center gap-2 min-w-0">
                 <span
@@ -158,15 +158,15 @@ export function Sidebar() {
                 <span className="font-semibold truncate">{workspace.name}</span>
               </div>
               {switching ? (
-                <Loader2 className="w-3.5 h-3.5 text-stone-400 animate-spin shrink-0" />
+                <Loader2 className="w-3.5 h-3.5 text-[var(--sidebar-muted)] animate-spin shrink-0" />
               ) : (
-                <ChevronDown className="w-3.5 h-3.5 text-stone-400 shrink-0" />
+                <ChevronDown className="w-3.5 h-3.5 text-[var(--sidebar-muted)] shrink-0" />
               )}
             </button>
 
             {showSwitcher && (
-              <div className="absolute left-3 right-3 top-14 z-40 bg-[#2C2727] border border-[#443C3C] rounded-xl shadow-xl py-1.5 max-h-64 overflow-y-auto">
-                <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-stone-400">
+              <div className="absolute left-3 right-3 top-14 z-40 bg-[var(--sidebar-bg)] border border-[var(--sidebar-border)] rounded-xl shadow-xl py-1.5 max-h-64 overflow-y-auto">
+                <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--sidebar-muted)]">
                   Switch Workspace
                 </div>
                 {availableWorkspaces.map((ws) => {
@@ -181,8 +181,8 @@ export function Sidebar() {
                       }}
                       className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-xs text-left transition-colors cursor-pointer ${
                         active
-                          ? 'bg-[#3A3333] text-white font-semibold'
-                          : 'text-stone-300 hover:bg-[#352F2F] hover:text-white'
+                          ? 'bg-[var(--sidebar-hover)] text-[var(--sidebar-text-hover)] font-semibold'
+                          : 'text-[var(--sidebar-text)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-text-hover)]'
                       }`}
                     >
                       <div className="flex items-center gap-2 min-w-0">
@@ -196,11 +196,11 @@ export function Sidebar() {
                     </button>
                   );
                 })}
-                <div className="border-t border-[#3E3737] mt-1 pt-1 px-1.5">
+                <div className="border-t border-[var(--sidebar-border)] mt-1 pt-1 px-1.5">
                   <Link
                     href="/admin/workspaces"
                     onClick={() => setShowSwitcher(false)}
-                    className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-[11px] font-semibold text-brand hover:bg-[#352F2F] transition-colors"
+                    className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-[11px] font-semibold text-brand hover:bg-[var(--sidebar-hover)] transition-colors"
                   >
                     <Building2 className="w-3.5 h-3.5" />
                     <span>Manage All Workspaces</span>
@@ -215,9 +215,9 @@ export function Sidebar() {
         <div className="flex-1 py-5 px-3 flex flex-col justify-between overflow-y-auto">
           <div className="space-y-1">
             {isCollapsed ? (
-              <div className="my-2 border-t border-[#332D2D] mx-2" />
+              <div className="my-2 border-t border-[var(--sidebar-border)] mx-2" />
             ) : (
-              <div className="px-3 mb-2 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">
+              <div className="px-3 mb-2 text-[10px] font-semibold text-[var(--sidebar-muted)] uppercase tracking-wider">
                 HR Operations
               </div>
             )}
@@ -236,12 +236,12 @@ export function Sidebar() {
                   } rounded-lg text-sm font-medium transition-all ${
                     isActive
                       ? 'bg-brand text-white shadow-xs font-semibold'
-                      : 'text-stone-300 hover:text-white hover:bg-[#342F2F]'
+                      : 'text-[var(--sidebar-text)] hover:text-[var(--sidebar-text-hover)] hover:bg-[var(--sidebar-hover)]'
                   }`}
                 >
                   <Icon
                     className={`w-4 h-4 shrink-0 ${
-                      isActive ? 'text-white' : 'text-stone-400'
+                      isActive ? 'text-white' : 'text-[var(--sidebar-muted)]'
                     }`}
                   />
                   {!isCollapsed && <span className="truncate">{item.name}</span>}
@@ -253,7 +253,7 @@ export function Sidebar() {
 
         {/* Install Desktop App button at bottom of navbar - ONLY visible in web browser, NEVER in Electron */}
         {!isDesktopApp && (
-          <div className="p-3 border-t border-[#332D2D]">
+          <div className="p-3 border-t border-[var(--sidebar-border)]">
             {isCollapsed ? (
               <button
                 type="button"
@@ -281,18 +281,18 @@ export function Sidebar() {
       {showInstallModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
-            <div className="relative bg-[#221E1E] p-6 text-white border-b border-[#332D2D]">
+            <div className="relative bg-[var(--sidebar-bg)] p-6 text-[var(--sidebar-text-hover)] border-b border-[var(--sidebar-border)]">
               <button
                 type="button"
                 onClick={() => setShowInstallModal(false)}
-                className="absolute top-4 right-4 p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-stone-300 hover:text-white transition-colors cursor-pointer"
+                className="absolute top-4 right-4 p-1.5 rounded-lg bg-black/10 hover:bg-black/20 text-[var(--sidebar-text)] hover:text-[var(--sidebar-text-hover)] transition-colors cursor-pointer"
                 aria-label="Close modal"
               >
                 <X className="w-4 h-4" />
               </button>
 
               <div className="flex items-center gap-3.5">
-                <div className="w-12 h-12 rounded-xl bg-white p-1.5 shadow-md flex items-center justify-center shrink-0 overflow-hidden">
+                <div className="w-12 h-12 rounded-xl bg-white border border-black/10 p-1.5 shadow-md flex items-center justify-center shrink-0 overflow-hidden">
                   {collapsedImg ? (
                     <img
                       src={collapsedImg}
@@ -306,10 +306,10 @@ export function Sidebar() {
                   )}
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-white tracking-tight">
+                  <h3 className="text-base font-bold tracking-tight">
                     {workspace.name} Desktop
                   </h3>
-                  <p className="text-xs text-stone-400 mt-0.5">
+                  <p className="text-xs text-[var(--sidebar-muted)] mt-0.5">
                     Windows 10/11 Native Application
                   </p>
                 </div>

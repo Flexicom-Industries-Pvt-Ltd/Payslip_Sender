@@ -31,6 +31,7 @@ export async function PUT(
       iconUrl: body.iconUrl,
       heroImageUrl: body.heroImageUrl,
       primaryColor: body.primaryColor,
+      secondaryColor: body.secondaryColor,
       defaultSubject: body.defaultSubject,
       defaultBody: body.defaultBody,
       isActive: body.isActive,

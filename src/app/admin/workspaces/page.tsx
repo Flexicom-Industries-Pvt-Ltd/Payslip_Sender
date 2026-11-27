@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { useWorkspace } from '@/components/layout/workspace-context';
 import { Modal } from '@/components/ui/modal';
-import { THEME_PRESETS, deriveThemePalette, slugifyWorkspaceName } from '@/lib/theme-utils';
+import { slugifyWorkspaceName } from '@/lib/theme-utils';
 import { compressLogoToTinyBase64 } from '@/lib/image-optimizer';
+import { ColorThemePicker } from '@/components/ui/color-theme-picker';
 import { buildDefaultEmailBody, DEFAULT_EMAIL_SUBJECT } from '@/lib/email-templates';
 import {
   Building2,
@@ -20,7 +21,6 @@ import {
   Send,
   Mail,
   Upload,
-  Palette,
   KeyRound,
   AlertCircle,
   Loader2,
@@ -40,6 +40,7 @@ interface AdminWorkspaceItem {
   iconUrl: string | null;
   heroImageUrl: string | null;
   primaryColor: string;
+  secondaryColor: string;
   hoverColor: string;
   lightColor: string;
   borderColor: string;
@@ -61,6 +62,7 @@ interface WorkspaceFormState {
   logoUrl: string;
   iconUrl: string;
   primaryColor: string;
+  secondaryColor: string;
   defaultSubject: string;
   defaultBody: string;
   isActive: boolean;
@@ -75,6 +77,7 @@ const EMPTY_FORM: WorkspaceFormState = {
   logoUrl: '',
   iconUrl: '',
   primaryColor: '#2563EB',
+  secondaryColor: '#0F172A',
   defaultSubject: DEFAULT_EMAIL_SUBJECT,
   defaultBody: '',
   isActive: true,
@@ -146,6 +149,7 @@ export default function AdminWorkspacesPage() {
       logoUrl: ws.logoUrl || '',
       iconUrl: ws.iconUrl || '',
       primaryColor: ws.primaryColor || '#78B338',
+      secondaryColor: ws.secondaryColor || '#221E1E',
       defaultSubject: ws.defaultSubject || DEFAULT_EMAIL_SUBJECT,
       defaultBody: ws.defaultBody || buildDefaultEmailBody(ws.legalName || ws.name),
       isActive: ws.isActive,
@@ -256,8 +260,6 @@ export default function AdminWorkspacesPage() {
     setTimeout(() => setCopiedSlug(null), 2000);
   };
 
-  const previewPalette = deriveThemePalette(form.primaryColor);
-
   if (role && role !== 'SUPER_ADMIN') {
     return (
       <DashboardShell>
@@ -332,8 +334,11 @@ export default function AdminWorkspacesPage() {
                   isCurrent ? 'border-slate-900 ring-1 ring-slate-900/10' : 'border-slate-200/80'
                 }`}
               >
-                {/* Top Color Bar */}
-                <div className="h-1.5 w-full" style={{ backgroundColor: ws.primaryColor }} />
+                {/* Top Dual Color Strip */}
+                <div className="flex h-1.5 w-full">
+                  <div className="w-1/3 h-full" style={{ backgroundColor: ws.secondaryColor || '#221E1E' }} />
+                  <div className="w-2/3 h-full" style={{ backgroundColor: ws.primaryColor }} />
+                </div>
 
                 <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
                   {/* Top Row: Logo + Name */}
@@ -533,48 +538,6 @@ export default function AdminWorkspacesPage() {
             </div>
           )}
 
-          {/* Live Theme Preview Banner */}
-          <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/70 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-12 h-12 rounded-xl bg-white border border-slate-200 p-1.5 flex items-center justify-center shrink-0 overflow-hidden">
-                {form.logoUrl || form.iconUrl ? (
-                  <img
-                    src={form.logoUrl || form.iconUrl}
-                    alt="Preview Logo"
-                    className="w-full h-full object-contain"
-                  />
-                ) : (
-                  <div
-                    className="w-full h-full rounded-lg text-white flex items-center justify-center font-bold text-sm"
-                    style={{ backgroundColor: previewPalette.primaryColor }}
-                  >
-                    {(form.name || 'CO')
-                      .split(/\s+/)
-                      .map((w) => w[0])
-                      .join('')
-                      .slice(0, 2)
-                      .toUpperCase()}
-                  </div>
-                )}
-              </div>
-              <div className="min-w-0">
-                <div className="text-xs font-bold text-slate-900 truncate">
-                  {form.name || 'Company Display Name'}
-                </div>
-                <div className="text-[11px] text-slate-500 truncate">
-                  {form.legalName || form.name || 'Company Legal Name'}
-                </div>
-              </div>
-            </div>
-
-            <span
-              className="px-3 py-1.5 rounded-lg text-xs font-bold text-white shrink-0 shadow-2xs"
-              style={{ backgroundColor: previewPalette.primaryColor }}
-            >
-              Sample Button
-            </span>
-          </div>
-
           {/* Identity Fields */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
@@ -717,54 +680,16 @@ export default function AdminWorkspacesPage() {
             </div>
           </div>
 
-          {/* Color Theme Selector */}
-          <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                <Palette className="w-3.5 h-3.5 text-slate-500" />
-                <span>Brand Color Theme</span>
-              </span>
-              <div className="flex items-center gap-2">
-                <input
-                  type="color"
-                  value={form.primaryColor}
-                  onChange={(e) => setForm({ ...form, primaryColor: e.target.value })}
-                  className="w-7 h-7 rounded cursor-pointer border border-slate-300 bg-white p-0.5"
-                />
-                <input
-                  type="text"
-                  value={form.primaryColor}
-                  onChange={(e) => setForm({ ...form, primaryColor: e.target.value })}
-                  className="w-20 px-2 py-1 text-[11px] font-mono bg-white border border-slate-200 rounded-lg uppercase"
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              {THEME_PRESETS.map((preset) => {
-                const selected =
-                  form.primaryColor.toUpperCase() === preset.primaryColor.toUpperCase();
-                return (
-                  <button
-                    key={preset.name}
-                    type="button"
-                    onClick={() => setForm({ ...form, primaryColor: preset.primaryColor })}
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-all cursor-pointer ${
-                      selected
-                        ? 'bg-white border-slate-900 text-slate-900 shadow-2xs'
-                        : 'bg-white/70 border-slate-200 text-slate-600 hover:bg-white'
-                    }`}
-                  >
-                    <span
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: preset.primaryColor }}
-                    />
-                    <span>{preset.name}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          {/* Dual Primary & Secondary Color Theme Selector */}
+          <ColorThemePicker
+            primaryColor={form.primaryColor}
+            secondaryColor={form.secondaryColor}
+            companyName={form.name || 'Company Name'}
+            logoUrl={form.logoUrl}
+            iconUrl={form.iconUrl}
+            onPrimaryChange={(hex) => setForm((prev) => ({ ...prev, primaryColor: hex }))}
+            onSecondaryChange={(hex) => setForm((prev) => ({ ...prev, secondaryColor: hex }))}
+          />
 
           {editingId && (
             <div className="flex items-center gap-2">
@@ -794,7 +719,7 @@ export default function AdminWorkspacesPage() {
               type="submit"
               disabled={saving}
               className="inline-flex items-center gap-2 px-5 py-2 text-xs font-bold text-white rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-60"
-              style={{ backgroundColor: previewPalette.primaryColor }}
+              style={{ backgroundColor: form.primaryColor }}
             >
               {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               <span>{editingId ? 'Save Workspace Changes' : 'Create Workspace'}</span>
