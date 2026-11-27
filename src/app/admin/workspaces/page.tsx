@@ -30,6 +30,8 @@ import {
   Eye,
   EyeOff,
   LogOut,
+  X,
+  Image as ImageIcon,
 } from 'lucide-react';
 
 interface AdminWorkspaceItem {
@@ -571,10 +573,11 @@ export default function AdminWorkspacesPage() {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={editingId ? 'Edit Company Workspace' : 'Create New Company Workspace'}
-        maxWidth="2xl"
+        title={editingId ? 'Edit Company Workspace' : 'New Company Workspace'}
+        description="Configure company identity, HR passcode, brand assets, and live portal theme."
+        maxWidth="4xl"
       >
-        <form onSubmit={handleSave} className="space-y-5">
+        <form onSubmit={handleSave} className="space-y-6">
           {formError && (
             <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 flex items-center gap-2">
               <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
@@ -582,192 +585,307 @@ export default function AdminWorkspacesPage() {
             </div>
           )}
 
-          {/* Identity Fields */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Company Display Name *
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. Flexicom Industries"
-                value={form.name}
-                onChange={(e) => {
-                  const nextName = e.target.value;
-                  setForm((prev) => ({
-                    ...prev,
-                    name: nextName,
-                    slug: slugTouched ? prev.slug : slugifyWorkspaceName(nextName),
-                  }));
-                }}
-                className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-brand focus:bg-white"
-              />
-            </div>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-7 items-start">
+            {/* LEFT COLUMN: Company Details, Passcode & Brand Assets */}
+            <div className="lg:col-span-6 space-y-5">
+              <div className="space-y-3.5">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    Company Identity &amp; Access
+                  </span>
+                </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Workspace URL Code (Slug) *
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. flexicom-industries"
-                value={form.slug}
-                onChange={(e) => {
-                  setSlugTouched(true);
-                  setForm((prev) => ({
-                    ...prev,
-                    slug: slugifyWorkspaceName(e.target.value),
-                  }));
-                }}
-                className="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-brand focus:bg-white"
-              />
-            </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      Display Name <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Flexicom Industries"
+                      value={form.name}
+                      onChange={(e) => {
+                        const nextName = e.target.value;
+                        setForm((prev) => ({
+                          ...prev,
+                          name: nextName,
+                          slug: slugTouched ? prev.slug : slugifyWorkspaceName(nextName),
+                        }));
+                      }}
+                      className="w-full px-3.5 py-2 text-xs text-slate-900 bg-slate-50/70 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-slate-900/15 focus:border-slate-400 focus:bg-white transition-all"
+                    />
+                  </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Full Legal Name (Footer & Email Signature)
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. Flexicom Industries Pvt. Ltd."
-                value={form.legalName}
-                onChange={(e) => setForm({ ...form, legalName: e.target.value })}
-                className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-brand focus:bg-white"
-              />
-            </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      URL Code (Slug) <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. flexicom-industries"
+                      value={form.slug}
+                      onChange={(e) => {
+                        setSlugTouched(true);
+                        setForm((prev) => ({
+                          ...prev,
+                          slug: slugifyWorkspaceName(e.target.value),
+                        }));
+                      }}
+                      className="w-full px-3.5 py-2 text-xs font-mono text-slate-800 bg-slate-50/70 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-slate-900/15 focus:border-slate-400 focus:bg-white transition-all"
+                    />
+                  </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                HR Portal Passcode *
-              </label>
-              <input
-                type="text"
-                required
-                minLength={4}
-                placeholder="Minimum 4 characters"
-                value={form.passcode}
-                onChange={(e) => setForm({ ...form, passcode: e.target.value })}
-                className="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-brand focus:bg-white"
-              />
-            </div>
-          </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      Legal Name
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Flexicom Industries Pvt. Ltd."
+                      value={form.legalName}
+                      onChange={(e) => setForm({ ...form, legalName: e.target.value })}
+                      className="w-full px-3.5 py-2 text-xs text-slate-900 bg-slate-50/70 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-slate-900/15 focus:border-slate-400 focus:bg-white transition-all"
+                    />
+                  </div>
 
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">
-              Tagline / Plant Location (Optional — shown on Login page)
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. Corporate Headquarters • Kolkata"
-              value={form.tagline}
-              onChange={(e) => setForm({ ...form, tagline: e.target.value })}
-              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-brand focus:bg-white"
-            />
-          </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      HR Passcode <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      minLength={4}
+                      placeholder="Min. 4 characters"
+                      value={form.passcode}
+                      onChange={(e) => setForm({ ...form, passcode: e.target.value })}
+                      className="w-full px-3.5 py-2 text-xs font-mono text-slate-800 bg-slate-50/70 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-slate-900/15 focus:border-slate-400 focus:bg-white transition-all"
+                    />
+                  </div>
+                </div>
 
-          {/* Logo & Small Icon Upload */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-700">Full Company Logo</span>
-                <label className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-[11px] font-semibold text-slate-700 hover:bg-slate-100 cursor-pointer">
-                  <Upload className="w-3 h-3" />
-                  <span>Upload</span>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Tagline / Location
+                    <span className="ml-1.5 text-[11px] font-normal text-slate-400">
+                      (shown on company login page)
+                    </span>
+                  </label>
                   <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => handleImageUpload(e, 'logoUrl')}
+                    type="text"
+                    placeholder="e.g. Corporate Headquarters • Kolkata"
+                    value={form.tagline}
+                    onChange={(e) => setForm({ ...form, tagline: e.target.value })}
+                    className="w-full px-3.5 py-2 text-xs text-slate-900 bg-slate-50/70 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-slate-900/15 focus:border-slate-400 focus:bg-white transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Brand Assets */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    Brand Assets
+                  </span>
+                  <span className="text-[11px] text-slate-400 font-mono">
+                    /login?workspace={form.slug || 'company'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Full Logo */}
+                  <div className="p-3 rounded-xl border border-slate-200/80 bg-slate-50/50 space-y-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-9 h-9 rounded-lg bg-white border border-slate-200/90 flex items-center justify-center shrink-0 overflow-hidden p-1">
+                          {form.logoUrl ? (
+                            <img
+                              src={form.logoUrl}
+                              alt="Logo preview"
+                              className="w-full h-full object-contain"
+                            />
+                          ) : (
+                            <ImageIcon className="w-4 h-4 text-slate-300" />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-semibold text-slate-800 truncate">
+                            Company Logo
+                          </div>
+                          <div className="text-[10px] text-slate-400">
+                            {form.logoUrl ? 'Custom image set' : 'Sidebar header'}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1 shrink-0">
+                        {form.logoUrl && (
+                          <button
+                            type="button"
+                            onClick={() => setForm((prev) => ({ ...prev, logoUrl: '' }))}
+                            className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                            title="Clear logo"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        <label className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-[11px] font-semibold text-slate-700 hover:bg-slate-100 cursor-pointer shadow-2xs">
+                          <Upload className="w-3 h-3" />
+                          <span>Upload</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => handleImageUpload(e, 'logoUrl')}
+                          />
+                        </label>
+                      </div>
+                    </div>
+
+                    <input
+                      type="text"
+                      placeholder="Or paste image URL..."
+                      value={
+                        form.logoUrl.startsWith('data:')
+                          ? `Optimized WebP (${(form.logoUrl.length / 1024).toFixed(1)} KB)`
+                          : form.logoUrl
+                      }
+                      onChange={(e) => setForm({ ...form, logoUrl: e.target.value })}
+                      className="w-full px-2.5 py-1.5 text-[11px] text-slate-700 bg-white border border-slate-200/90 rounded-lg focus:outline-hidden focus:border-slate-400"
+                    />
+                  </div>
+
+                  {/* Square Emblem */}
+                  <div className="p-3 rounded-xl border border-slate-200/80 bg-slate-50/50 space-y-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-9 h-9 rounded-lg bg-white border border-slate-200/90 flex items-center justify-center shrink-0 overflow-hidden p-1">
+                          {form.iconUrl ? (
+                            <img
+                              src={form.iconUrl}
+                              alt="Emblem preview"
+                              className="w-full h-full object-contain"
+                            />
+                          ) : (
+                            <ImageIcon className="w-4 h-4 text-slate-300" />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-semibold text-slate-800 truncate">
+                            App Icon
+                          </div>
+                          <div className="text-[10px] text-slate-400">
+                            {form.iconUrl ? 'Custom icon set' : 'Tab & desktop'}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1 shrink-0">
+                        {form.iconUrl && (
+                          <button
+                            type="button"
+                            onClick={() => setForm((prev) => ({ ...prev, iconUrl: '' }))}
+                            className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                            title="Clear icon"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        <label className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-[11px] font-semibold text-slate-700 hover:bg-slate-100 cursor-pointer shadow-2xs">
+                          <Upload className="w-3 h-3" />
+                          <span>Upload</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => handleImageUpload(e, 'iconUrl')}
+                          />
+                        </label>
+                      </div>
+                    </div>
+
+                    <input
+                      type="text"
+                      placeholder="Optional square emblem URL..."
+                      value={
+                        form.iconUrl.startsWith('data:')
+                          ? `Optimized ${form.iconUrl.includes('image/png') ? 'PNG' : 'Image'} (${(form.iconUrl.length / 1024).toFixed(1)} KB)`
+                          : form.iconUrl
+                      }
+                      onChange={(e) => setForm({ ...form, iconUrl: e.target.value })}
+                      className="w-full px-2.5 py-1.5 text-[11px] text-slate-700 bg-white border border-slate-200/90 rounded-lg focus:outline-hidden focus:border-slate-400"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {editingId && (
+                <label
+                  htmlFor="wsActiveToggle"
+                  className="flex items-center justify-between p-3 rounded-xl border border-slate-200/80 bg-slate-50/60 cursor-pointer"
+                >
+                  <div>
+                    <div className="text-xs font-semibold text-slate-800">Workspace Active</div>
+                    <div className="text-[11px] text-slate-400">
+                      Allow company HR admins to sign in
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    id="wsActiveToggle"
+                    checked={form.isActive}
+                    onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
+                    className="w-4 h-4 rounded border-slate-300 accent-slate-900"
                   />
                 </label>
-              </div>
-              <input
-                type="text"
-                placeholder="Or paste image URL (e.g. /logo.png)"
-                value={
-                  form.logoUrl.startsWith('data:')
-                    ? `Optimized WebP (${(form.logoUrl.length / 1024).toFixed(1)} KB)`
-                    : form.logoUrl
-                }
-                onChange={(e) => setForm({ ...form, logoUrl: e.target.value })}
-                className="w-full px-2.5 py-1.5 text-[11px] bg-white border border-slate-200 rounded-lg focus:outline-hidden"
-              />
+              )}
             </div>
 
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-700">Collapsed Icon / Emblem</span>
-                <label className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-[11px] font-semibold text-slate-700 hover:bg-slate-100 cursor-pointer">
-                  <Upload className="w-3 h-3" />
-                  <span>Upload</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => handleImageUpload(e, 'iconUrl')}
-                  />
-                </label>
+            {/* RIGHT COLUMN: Live Portal Preview & Color Theme */}
+            <div className="lg:col-span-6 space-y-3.5">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  Portal Appearance &amp; Live Preview
+                </span>
               </div>
-              <input
-                type="text"
-                placeholder="Optional square emblem (defaults to logo)"
-                value={
-                  form.iconUrl.startsWith('data:')
-                    ? `Optimized ${form.iconUrl.includes('image/png') ? 'PNG' : 'Image'} (${(form.iconUrl.length / 1024).toFixed(1)} KB)`
-                    : form.iconUrl
-                }
-                onChange={(e) => setForm({ ...form, iconUrl: e.target.value })}
-                className="w-full px-2.5 py-1.5 text-[11px] bg-white border border-slate-200 rounded-lg focus:outline-hidden"
+
+              <ColorThemePicker
+                primaryColor={form.primaryColor}
+                secondaryColor={form.secondaryColor}
+                companyName={form.name || 'Company Name'}
+                logoUrl={form.logoUrl}
+                iconUrl={form.iconUrl}
+                onPrimaryChange={(hex) => setForm((prev) => ({ ...prev, primaryColor: hex }))}
+                onSecondaryChange={(hex) => setForm((prev) => ({ ...prev, secondaryColor: hex }))}
               />
             </div>
           </div>
-
-          {/* Dual Primary & Secondary Color Theme Selector */}
-          <ColorThemePicker
-            primaryColor={form.primaryColor}
-            secondaryColor={form.secondaryColor}
-            companyName={form.name || 'Company Name'}
-            logoUrl={form.logoUrl}
-            iconUrl={form.iconUrl}
-            onPrimaryChange={(hex) => setForm((prev) => ({ ...prev, primaryColor: hex }))}
-            onSecondaryChange={(hex) => setForm((prev) => ({ ...prev, secondaryColor: hex }))}
-          />
-
-          {editingId && (
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="wsActiveToggle"
-                checked={form.isActive}
-                onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
-                className="w-4 h-4 rounded border-slate-300"
-              />
-              <label htmlFor="wsActiveToggle" className="text-xs font-semibold text-slate-700">
-                Workspace Active (Allow HR admins of this company to sign in)
-              </label>
-            </div>
-          )}
 
           {/* Footer Buttons */}
-          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={() => setIsModalOpen(false)}
-              className="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="inline-flex items-center gap-2 px-5 py-2 text-xs font-bold text-white rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-60"
-              style={{ backgroundColor: form.primaryColor }}
-            >
-              {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              <span>{editingId ? 'Save Workspace Changes' : 'Create Workspace'}</span>
-            </button>
+          <div className="flex items-center justify-between gap-3 pt-4 border-t border-slate-100">
+            <span className="text-[11px] text-slate-400 hidden sm:inline">
+              Isolated database scope &amp; branding apply immediately after saving.
+            </span>
+            <div className="flex items-center gap-2.5 ml-auto">
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="inline-flex items-center gap-2 px-5 py-2 text-xs font-bold text-white rounded-xl shadow-sm transition-all cursor-pointer disabled:opacity-60 hover:opacity-95"
+                style={{ backgroundColor: form.primaryColor }}
+              >
+                {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                <span>{editingId ? 'Save Changes' : 'Create Workspace'}</span>
+              </button>
+            </div>
           </div>
         </form>
       </Modal>
