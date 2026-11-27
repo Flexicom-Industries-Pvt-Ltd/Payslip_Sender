@@ -54,7 +54,11 @@ export function Header() {
   const handleLogout = async () => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
-      router.push(`/login?workspace=${encodeURIComponent(workspace.slug)}`);
+      if (role === 'SUPER_ADMIN') {
+        router.push('/admin/login');
+      } else {
+        router.push(`/login?workspace=${encodeURIComponent(workspace.slug)}`);
+      }
       router.refresh();
     } catch {
       router.push('/login');

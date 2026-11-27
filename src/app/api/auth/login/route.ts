@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 1. Explicit Super Admin sign-in
+    // 1. Dedicated Super Admin sign-in (/admin/login only)
     if (mode === 'super_admin') {
       if (!verifySuperAdminPasscode(trimmedPasscode)) {
         return NextResponse.json(
@@ -36,56 +36,6 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const defaultWs = await ensureDefaultWorkspace();
-      await setAuthSession({
-        role: 'SUPER_ADMIN',
-        workspaceId: defaultWs.id,
-      });
-
-      return NextResponse.json({
-        success: true,
-        role: 'SUPER_ADMIN',
-        workspace: toPublicWorkspaceBranding(defaultWs),
-      });
-    }
-
-    // 2. Company Workspace sign-in via slug
-    const cleanSlug = (workspaceSlug || '').trim().toLowerCase();
-    if (cleanSlug) {
-      const ws = await getWorkspaceBySlug(cleanSlug);
-      if (!ws || !ws.isActive) {
-        return NextResponse.json(
-          { success: false, error: 'Workspace not found or inactive.' },
-          { status: 404 }
-        );
-      }
-
-      // Super Admin can also log straight into any workspace with their master passcode
-      const isWorkspaceMatch = ws.passcode === trimmedPasscode;
-      const isMasterMatch = verifySuperAdminPasscode(trimmedPasscode);
-
-      if (!isWorkspaceMatch && !isMasterMatch) {
-        return NextResponse.json(
-          { success: false, error: 'Invalid workspace passcode.' },
-          { status: 401 }
-        );
-      }
-
-      const role = isMasterMatch && !isWorkspaceMatch ? 'SUPER_ADMIN' : 'COMPANY_ADMIN';
-      await setAuthSession({
-        role,
-        workspaceId: ws.id,
-      });
-
-      return NextResponse.json({
-        success: true,
-        role,
-        workspace: toPublicWorkspaceBranding(ws),
-      });
-    }
-
-    // 3. Fallback when no workspaceSlug entered: check Super Admin passcode directly
-    if (verifySuperAdminPasscode(trimmedPasscode)) {
       const defaultWs = await ensureDefaultWorkspace();
       await setAuthSession({
         role: 'SUPER_ADMIN',
@@ -99,13 +49,44 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Please specify your Company Workspace Code and valid passcode.',
-      },
-      { status: 401 }
-    );
+    // 2. Company Workspace sign-in (/login or /login?workspace=<slug>)
+    // Strictly requires a valid workspace slug + that workspace's passcode and NEVER grants SUPER_ADMIN
+    const cleanSlug = (workspaceSlug || '').trim().toLowerCase();
+    if (!cleanSlug) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Please enter your Company Workspace Code.',
+        },
+        { status: 400 }
+      );
+    }
+
+    const ws = await getWorkspaceBySlug(cleanSlug);
+    if (!ws || !ws.isActive) {
+      return NextResponse.json(
+        { success: false, error: 'Company workspace not found or inactive.' },
+        { status: 404 }
+      );
+    }
+
+    if (ws.passcode !== trimmedPasscode) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid workspace passcode.' },
+        { status: 401 }
+      );
+    }
+
+    await setAuthSession({
+      role: 'COMPANY_ADMIN',
+      workspaceId: ws.id,
+    });
+
+    return NextResponse.json({
+      success: true,
+      role: 'COMPANY_ADMIN',
+      workspace: toPublicWorkspaceBranding(ws),
+    });
   } catch (err: any) {
     return NextResponse.json(
       { success: false, error: err.message || 'Authentication failed' },

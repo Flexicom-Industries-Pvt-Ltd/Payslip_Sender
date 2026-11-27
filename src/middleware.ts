@@ -8,6 +8,7 @@ export async function middleware(request: NextRequest) {
   // Public paths that do not require auth
   if (
     pathname.startsWith('/login') ||
+    pathname.startsWith('/admin/login') ||
     pathname.startsWith('/api/auth') ||
     pathname.startsWith('/api/workspaces/public') ||
     pathname.startsWith('/api/workspaces/icon') ||
@@ -29,7 +30,8 @@ export async function middleware(request: NextRequest) {
         { status: 401 }
       );
     }
-    const loginUrl = new URL('/login', request.url);
+    const targetLogin = pathname.startsWith('/admin') ? '/admin/login' : '/login';
+    const loginUrl = new URL(targetLogin, request.url);
     loginUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(loginUrl);
   }

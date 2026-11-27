@@ -11,6 +11,7 @@ import {
   Loader2,
   Shield,
   Building2,
+  Download,
 } from 'lucide-react';
 import type { WorkspaceBranding } from '@/components/layout/workspace-context';
 import {
@@ -20,7 +21,6 @@ import {
   useWorkspace,
 } from '@/components/layout/workspace-context';
 import { buildMonogramFaviconSvg } from '@/lib/theme-utils';
-import { Download } from 'lucide-react';
 
 function LoginPageInner() {
   const router = useRouter();
@@ -28,7 +28,6 @@ function LoginPageInner() {
   const urlSlug = searchParams.get('workspace') || searchParams.get('w') || '';
   const { canOneClickInstall, isInstalledApp, triggerPwaInstall } = useWorkspace();
 
-  const [loginMode, setLoginMode] = useState<'workspace' | 'super_admin'>('workspace');
   const [workspaceSlug, setWorkspaceSlug] = useState(urlSlug);
   const [passcode, setPasscode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -66,11 +65,14 @@ function LoginPageInner() {
           applyFaviconToDocument(iconHref);
           applyManifestToDocument(data.workspace.slug);
 
-          // If launching an installed desktop app while already signed in to this workspace, jump straight inside
           try {
             const authRes = await fetch('/api/auth/logout');
             const authData = await authRes.json();
-            if (!cancelled && authData.authenticated && authData.workspaceId === data.workspace.id) {
+            if (
+              !cancelled &&
+              authData.authenticated &&
+              authData.workspaceId === data.workspace.id
+            ) {
               router.replace('/employees');
             }
           } catch {
@@ -90,17 +92,17 @@ function LoginPageInner() {
     return () => {
       cancelled = true;
     };
-  }, [urlSlug]);
+  }, [urlSlug, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!passcode.trim()) {
-      setError('Please enter your passcode');
+    if (!workspaceSlug.trim()) {
+      setError('Please enter your Company Workspace Code');
       return;
     }
-    if (loginMode === 'workspace' && !workspaceSlug.trim()) {
-      // Allow signing in directly with Super Admin passcode even without slug
-      // or prompt clearly if it fails
+    if (!passcode.trim()) {
+      setError('Please enter your administrator passcode');
+      return;
     }
 
     setLoading(true);
@@ -111,8 +113,8 @@ function LoginPageInner() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          mode: loginMode,
-          workspaceSlug: loginMode === 'workspace' ? workspaceSlug.trim() : undefined,
+          mode: 'workspace',
+          workspaceSlug: workspaceSlug.trim(),
           passcode: passcode.trim(),
         }),
       });
@@ -124,11 +126,7 @@ function LoginPageInner() {
         return;
       }
 
-      if (loginMode === 'super_admin') {
-        router.push('/admin/workspaces');
-      } else {
-        router.push('/employees');
-      }
+      router.push('/employees');
       router.refresh();
     } catch {
       setError('Connection error occurred while logging in');
@@ -136,7 +134,7 @@ function LoginPageInner() {
     }
   };
 
-  const accentColor = brandedWorkspace?.primaryColor || '#78B338';
+  const accentColor = brandedWorkspace?.primaryColor || '#0F172A';
   const isSterling = brandedWorkspace?.slug === 'sterling-distillers';
 
   const brandInitials = (brandedWorkspace?.name || 'HR')
@@ -148,7 +146,7 @@ function LoginPageInner() {
 
   return (
     <div className="min-h-screen bg-white grid grid-cols-1 lg:grid-cols-12 select-none overflow-hidden font-sans">
-      {/* LEFT COLUMN: Clean White Authentication Panel */}
+      {/* LEFT COLUMN: Clean White Company Workspace Login */}
       <div className="lg:col-span-5 bg-white p-8 sm:p-12 lg:p-14 flex flex-col justify-between border-r border-slate-200/80 relative z-10">
         {/* Top Company Brand */}
         <div className="flex items-center justify-between gap-3">
@@ -182,7 +180,7 @@ function LoginPageInner() {
                   Payslip Portal
                 </div>
                 <div className="text-[11px] text-slate-500 mt-0.5">
-                  Multi-Company HR Workspace
+                  Company HR Workspace
                 </div>
               </div>
             </div>
@@ -191,56 +189,16 @@ function LoginPageInner() {
 
         {/* Center Form */}
         <div className="my-auto py-8 max-w-sm w-full mx-auto">
-          <div className="mb-6">
+          <div className="mb-7">
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-              {brandedWorkspace
-                ? `Sign In to ${brandedWorkspace.name}`
-                : loginMode === 'super_admin'
-                ? 'Platform Super Admin'
-                : 'Sign In to HR Workspace'}
+              {brandedWorkspace ? `Sign In to ${brandedWorkspace.name}` : 'Sign In to HR Portal'}
             </h1>
             <p className="text-xs text-slate-500 mt-2 leading-relaxed">
               {brandedWorkspace
                 ? 'Confidential employee payslip distribution and payroll records management.'
-                : loginMode === 'super_admin'
-                ? 'Create and manage company workspaces, themes, logos, and access.'
-                : 'Enter your Company Workspace Code and HR administrator passcode.'}
+                : 'Enter your Company Workspace Code and administrator passcode.'}
             </p>
           </div>
-
-          {/* Mode Tabs only when not locked to a branded URL */}
-          {!urlSlug && (
-            <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-xl mb-5 text-xs font-semibold">
-              <button
-                type="button"
-                onClick={() => {
-                  setLoginMode('workspace');
-                  setError('');
-                }}
-                className={`py-2 px-3 rounded-lg transition-all cursor-pointer ${
-                  loginMode === 'workspace'
-                    ? 'bg-white text-slate-900 shadow-2xs font-bold'
-                    : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                Company Workspace
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setLoginMode('super_admin');
-                  setError('');
-                }}
-                className={`py-2 px-3 rounded-lg transition-all cursor-pointer ${
-                  loginMode === 'super_admin'
-                    ? 'bg-white text-slate-900 shadow-2xs font-bold'
-                    : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                Super Admin
-              </button>
-            </div>
-          )}
 
           {error && (
             <div className="mb-5 p-3.5 bg-rose-50 border border-rose-200/80 rounded-xl flex items-start gap-2.5 text-xs text-rose-700 animate-in fade-in duration-150">
@@ -250,7 +208,7 @@ function LoginPageInner() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {loginMode === 'workspace' && !brandedWorkspace && (
+            {!brandedWorkspace && (
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                   Company Workspace Code
@@ -260,7 +218,7 @@ function LoginPageInner() {
                     type="text"
                     value={workspaceSlug}
                     onChange={(e) => setWorkspaceSlug(e.target.value)}
-                    placeholder="e.g. sterling-distillers"
+                    placeholder="e.g. your-company"
                     className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50/70 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-slate-900 focus:bg-white focus:border-transparent transition-all text-slate-900 placeholder:text-slate-400 font-mono"
                     autoFocus={!urlSlug}
                   />
@@ -278,14 +236,10 @@ function LoginPageInner() {
                   type={showPassword ? 'text' : 'password'}
                   value={passcode}
                   onChange={(e) => setPasscode(e.target.value)}
-                  placeholder={
-                    loginMode === 'super_admin'
-                      ? 'Enter super admin passcode'
-                      : 'Enter administrator passcode'
-                  }
+                  placeholder="Enter administrator passcode"
                   className="w-full pl-10 pr-10 py-2.5 text-sm bg-slate-50/70 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:bg-white focus:border-transparent transition-all text-slate-900 placeholder:text-slate-400"
                   style={{ '--tw-ring-color': accentColor } as React.CSSProperties}
-                  autoFocus={Boolean(urlSlug) || loginMode === 'super_admin'}
+                  autoFocus={Boolean(urlSlug)}
                 />
                 <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                 <button
@@ -345,7 +299,7 @@ function LoginPageInner() {
         </div>
       </div>
 
-      {/* RIGHT COLUMN: Branded Company Showcase (Sterling preserves plant showcase; new workspaces show clean company branding) */}
+      {/* RIGHT COLUMN: Branded Company Showcase */}
       <div className="hidden lg:flex lg:col-span-7 bg-[#F8FAF6] p-10 xl:p-14 flex-col justify-between overflow-y-auto">
         {isSterling ? (
           <>
@@ -426,7 +380,7 @@ function LoginPageInner() {
                   {brandedWorkspace?.tagline ||
                     (brandedWorkspace
                       ? `${brandedWorkspace.name} HR Workspace`
-                      : 'Dedicated Company Workspaces')}
+                      : 'Dedicated Company Portal')}
                 </span>
               </div>
               <span className="text-xs text-slate-500 font-medium">
@@ -453,7 +407,7 @@ function LoginPageInner() {
                     ? `Welcome to the official employee payslip distribution portal for ${
                         brandedWorkspace.legalName || brandedWorkspace.name
                       }. Manage your employee roster, dispatch individual PDF salary slips securely, and track full delivery audit logs.`
-                    : 'Each company workspace operates in complete isolation with its own branding, employee directory, mail server configuration, and delivery audit logs.'}
+                    : 'Access your organization workspace to manage employee payroll records, dispatch individual salary slips securely, and monitor delivery audit logs.'}
                 </p>
               </div>
 
@@ -461,27 +415,27 @@ function LoginPageInner() {
                 <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-2xs">
                   <span className="block text-xs font-bold text-slate-900">Employee Roster</span>
                   <span className="block text-[11px] text-slate-500 mt-1 leading-snug">
-                    12-month delivery matrix & spreadsheet import
+                    12-month delivery matrix &amp; spreadsheet import
                   </span>
                 </div>
                 <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-2xs">
                   <span className="block text-xs font-bold text-slate-900">Direct Dispatch</span>
                   <span className="block text-[11px] text-slate-500 mt-1 leading-snug">
-                    Individual encrypted PDF delivery with zero CC/BCC
+                    Individual PDF delivery with zero CC/BCC
                   </span>
                 </div>
                 <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-2xs">
                   <span className="block text-xs font-bold text-slate-900">Audit Trail</span>
                   <span className="block text-[11px] text-slate-500 mt-1 leading-snug">
-                    Complete SMTP delivery telemetry and CSV export
+                    Complete SMTP delivery logs &amp; CSV export
                   </span>
                 </div>
               </div>
             </div>
 
             <div className="flex items-center justify-between text-xs text-slate-400 pt-4 border-t border-slate-200/70">
-              <span>{brandedWorkspace?.legalName || 'Multi-Tenant HR Portal'}</span>
-              <span>Private & Isolated Workspace</span>
+              <span>{brandedWorkspace?.legalName || 'Enterprise HR Portal'}</span>
+              <span>Authorized Personnel Only</span>
             </div>
           </>
         )}

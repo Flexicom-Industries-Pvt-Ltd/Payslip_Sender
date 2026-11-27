@@ -36,8 +36,9 @@ interface SMTPFormData {
 }
 
 export default function SettingsPage() {
-  const { workspace, refreshWorkspace } = useWorkspace();
+  const { workspace, role, refreshWorkspace } = useWorkspace();
   const [activeTab, setActiveTab] = useState<'smtp' | 'branding'>('smtp');
+  const isSuperAdmin = role === 'SUPER_ADMIN';
 
   const [formData, setFormData] = useState<SMTPFormData>({
     host: '',
@@ -311,48 +312,54 @@ export default function SettingsPage() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            {activeTab === 'smtp' ? (
-              <Mail className="w-5 h-5 text-brand" />
-            ) : (
+            {activeTab === 'branding' && isSuperAdmin ? (
               <Palette className="w-5 h-5 text-brand" />
+            ) : (
+              <Mail className="w-5 h-5 text-brand" />
             )}
-            <span>Workspace Settings — {workspace.name}</span>
+            <span>
+              {isSuperAdmin ? `Workspace Settings — ${workspace.name}` : 'Email Server (SMTP) Settings'}
+            </span>
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Manage outgoing mail server (SMTP) and white-label company theme for this workspace.
+            {isSuperAdmin
+              ? 'Manage outgoing mail server (SMTP) and white-label company theme for this workspace.'
+              : `Configure outgoing mail server credentials for ${workspace.name}.`}
           </p>
         </div>
 
-        {/* Section Tabs */}
-        <div className="inline-flex rounded-xl border border-slate-200 bg-slate-100 p-1 text-xs font-semibold">
-          <button
-            type="button"
-            onClick={() => setActiveTab('smtp')}
-            className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition-all cursor-pointer ${
-              activeTab === 'smtp'
-                ? 'bg-white text-slate-900 shadow-2xs font-bold'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Server className="w-3.5 h-3.5 text-brand" />
-            <span>Email Server (SMTP)</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('branding')}
-            className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition-all cursor-pointer ${
-              activeTab === 'branding'
-                ? 'bg-white text-slate-900 shadow-2xs font-bold'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Palette className="w-3.5 h-3.5 text-brand" />
-            <span>Branding & Theme</span>
-          </button>
-        </div>
+        {/* Section Tabs — Branding tab shown ONLY to Super Admin */}
+        {isSuperAdmin && (
+          <div className="inline-flex rounded-xl border border-slate-200 bg-slate-100 p-1 text-xs font-semibold">
+            <button
+              type="button"
+              onClick={() => setActiveTab('smtp')}
+              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition-all cursor-pointer ${
+                activeTab === 'smtp'
+                  ? 'bg-white text-slate-900 shadow-2xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Server className="w-3.5 h-3.5 text-brand" />
+              <span>Email Server (SMTP)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('branding')}
+              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition-all cursor-pointer ${
+                activeTab === 'branding'
+                  ? 'bg-white text-slate-900 shadow-2xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Palette className="w-3.5 h-3.5 text-brand" />
+              <span>Branding & Theme</span>
+            </button>
+          </div>
+        )}
       </div>
 
-      {activeTab === 'smtp' ? (
+      {activeTab === 'smtp' || !isSuperAdmin ? (
         <div className="max-w-4xl bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-8 shadow-xs space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-100">
             <div className="flex items-center gap-3">

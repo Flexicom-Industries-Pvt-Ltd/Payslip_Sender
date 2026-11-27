@@ -59,6 +59,21 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
+
+    // Company admins may customize their workspace's email templates in Email Composer,
+    // while branding, colors, logos, and workspace passcodes remain controlled by Super Admin.
+    if (session.role !== 'SUPER_ADMIN') {
+      const updated = await updateWorkspace(session.workspaceId, {
+        defaultSubject: body.defaultSubject,
+        defaultBody: body.defaultBody,
+      });
+
+      return NextResponse.json({
+        success: true,
+        workspace: toPublicWorkspaceBranding(updated),
+      });
+    }
+
     const updated = await updateWorkspace(session.workspaceId, {
       name: body.name,
       legalName: body.legalName,
