@@ -21,9 +21,13 @@ import {
   Send,
 } from 'lucide-react';
 import Link from 'next/link';
+import { DEFAULT_WORKSPACE_PERMISSIONS } from '@/lib/workspace-permissions';
 
 export default function EmailComposerPage() {
-  const { workspace, refreshWorkspace } = useWorkspace();
+  const { workspace, role, refreshWorkspace } = useWorkspace();
+  const isComposerLocked =
+    role !== 'SUPER_ADMIN' &&
+    !(workspace.permissions || DEFAULT_WORKSPACE_PERMISSIONS).allowEmailComposer;
   const defaultBodyForWs = buildDefaultEmailBody(workspace.legalName || workspace.name);
 
   const [subject, setSubject] = useState(workspace.defaultSubject || DEFAULT_EMAIL_SUBJECT);
@@ -130,6 +134,7 @@ export default function EmailComposerPage() {
           </p>
         </div>
 
+        {!isComposerLocked ? (
         <div className="flex items-center gap-2">
           <button
             onClick={handleReset}
@@ -157,6 +162,11 @@ export default function EmailComposerPage() {
             )}
           </button>
         </div>
+        ) : (
+          <span className="px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+            Locked by Top Group Admin
+          </span>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

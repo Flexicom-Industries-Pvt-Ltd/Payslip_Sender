@@ -34,6 +34,7 @@ export async function PUT(
       secondaryColor: body.secondaryColor,
       defaultSubject: body.defaultSubject,
       defaultBody: body.defaultBody,
+      permissions: body.permissions,
       isActive: body.isActive,
     });
 

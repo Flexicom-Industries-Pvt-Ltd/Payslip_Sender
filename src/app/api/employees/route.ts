@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthSession } from '@/lib/auth';
-import { createEmployee, getEmployeesWithMonthlyStatus } from '@/lib/db-store';
+import {
+  checkWorkspacePermission,
+  createEmployee,
+  getEmployeesWithMonthlyStatus,
+} from '@/lib/db-store';
 
 export async function GET(request: NextRequest) {
   try {
@@ -48,8 +52,38 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
+    const allowed = await checkWorkspacePermission(
+      session.workspaceId,
+      session.role,
+      'allowEmployeeCrud'
+    );
+    if (!allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Employee directory modifications are locked by Top Group Admin.',
+        },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
-    const { employeeId, name, email, department } = body;
+    const {
+      employeeId,
+      name,
+      email,
+      department,
+      designation,
+      location,
+      dateOfJoining,
+      pan,
+      uan,
+      esicNo,
+      bankName,
+      bankAccount,
+      ifscCode,
+      salaryStructureJson,
+    } = body;
 
     if (!employeeId || !employeeId.trim()) {
       return NextResponse.json(
@@ -78,6 +112,16 @@ export async function POST(request: NextRequest) {
         name,
         email,
         department,
+        designation,
+        location,
+        dateOfJoining,
+        pan,
+        uan,
+        esicNo,
+        bankName,
+        bankAccount,
+        ifscCode,
+        salaryStructureJson,
       },
       session.workspaceId
     );

@@ -37,6 +37,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import Link from 'next/link';
+import { DEFAULT_WORKSPACE_PERMISSIONS } from '@/lib/workspace-permissions';
 
 interface EmployeeRecord {
   id: string;
@@ -70,7 +71,10 @@ interface SendStatusRecord {
 }
 
 export default function PayslipDistributionPage() {
-  const { workspace } = useWorkspace();
+  const { workspace, role } = useWorkspace();
+  const canDirectPdfUpload =
+    role === 'SUPER_ADMIN' ||
+    (workspace.permissions || DEFAULT_WORKSPACE_PERMISSIONS).allowDirectPdfUpload;
   // Step state
   const [currentStep, setCurrentStep] = useState<WorkflowStep>('ASSIGN');
 
@@ -478,6 +482,25 @@ export default function PayslipDistributionPage() {
       </div>
 
       {/* ================= STEP 1: UPLOAD & MANUAL ASSIGNMENT ================= */}
+      {!canDirectPdfUpload ? (
+        <div className="bg-white rounded-2xl border border-amber-200 p-8 text-center space-y-3 shadow-xs">
+          <Lock className="w-8 h-8 text-amber-500 mx-auto" />
+          <h3 className="text-sm font-bold text-slate-900">
+            Direct PDF Upload Restricted by Top Group Admin
+          </h3>
+          <p className="text-xs text-slate-500 max-w-md mx-auto">
+            This company workspace is configured to generate payslips directly through the approved Payslip Generator.
+          </p>
+          <Link
+            href="/generator"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand text-white text-xs font-bold hover:bg-brand-hover"
+          >
+            <span>Open Payslip Generator</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      ) : (
+      <>
       {currentStep === 'ASSIGN' && (
         <div className="space-y-6">
           {/* Period Selector & Quick Actions */}
@@ -1299,6 +1322,8 @@ export default function PayslipDistributionPage() {
         filename={previewPdfFilename}
         employeeName={previewPdfEmployeeName}
       />
+      </>
+      )}
     </DashboardShell>
   );
 }

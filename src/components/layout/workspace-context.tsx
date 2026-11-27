@@ -8,6 +8,10 @@ import {
   deriveSecondaryPalette,
   deriveThemePalette,
 } from '@/lib/theme-utils';
+import {
+  DEFAULT_WORKSPACE_PERMISSIONS,
+  type WorkspacePermissions,
+} from '@/lib/workspace-permissions';
 
 export interface WorkspaceBranding {
   id: string;
@@ -26,6 +30,7 @@ export interface WorkspaceBranding {
   textColor: string;
   defaultSubject: string | null;
   defaultBody: string | null;
+  permissions?: WorkspacePermissions;
   isActive: boolean;
 }
 
@@ -75,6 +80,7 @@ const NEUTRAL_INITIAL_WORKSPACE: WorkspaceBranding = {
   textColor: '#0F172A',
   defaultSubject: DEFAULT_EMAIL_SUBJECT,
   defaultBody: buildDefaultEmailBody('Human Resources Department'),
+  permissions: { ...DEFAULT_WORKSPACE_PERMISSIONS },
   isActive: true,
 };
 

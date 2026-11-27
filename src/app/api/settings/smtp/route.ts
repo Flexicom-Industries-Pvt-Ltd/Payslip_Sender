@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthSession } from '@/lib/auth';
+import { checkWorkspacePermission } from '@/lib/db-store';
 import { getSMTPConfigStatus, saveStoredSMTPConfig } from '@/lib/mailer';
 
 export async function GET() {
@@ -7,6 +8,21 @@ export async function GET() {
     const session = await getAuthSession();
     if (!session || !session.workspaceId) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const allowed = await checkWorkspacePermission(
+      session.workspaceId,
+      session.role,
+      'allowSmtpSettings'
+    );
+    if (!allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'SMTP configuration is centrally locked by Top Group Admin for this workspace.',
+        },
+        { status: 403 }
+      );
     }
 
     const status = await getSMTPConfigStatus(session.workspaceId);
@@ -24,6 +40,21 @@ export async function POST(request: NextRequest) {
     const session = await getAuthSession();
     if (!session || !session.workspaceId) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const allowed = await checkWorkspacePermission(
+      session.workspaceId,
+      session.role,
+      'allowSmtpSettings'
+    );
+    if (!allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'SMTP configuration is centrally locked by Top Group Admin for this workspace.',
+        },
+        { status: 403 }
+      );
     }
 
     const body = await request.json();

@@ -6,6 +6,7 @@ import {
   toPublicWorkspaceBranding,
   updateWorkspace,
 } from '@/lib/db-store';
+import { parseWorkspacePermissions } from '@/lib/workspace-permissions';
 
 export async function GET() {
   try {
@@ -61,10 +62,29 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
 
     if (session.role !== 'SUPER_ADMIN') {
-      const updated = await updateWorkspace(session.workspaceId, {
-        defaultSubject: body.defaultSubject,
-        defaultBody: body.defaultBody,
-      });
+      const ws = await getWorkspaceById(session.workspaceId);
+      const perms = parseWorkspacePermissions(ws?.permissionsJson);
+
+      const updateData: any = {};
+      if (body.savedExcelMapping !== undefined) {
+        updateData.permissions = { savedExcelMapping: body.savedExcelMapping };
+      }
+
+      if (body.defaultSubject !== undefined || body.defaultBody !== undefined) {
+        if (!perms.allowEmailComposer) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'Email template editing is locked by Top Group Admin for this workspace.',
+            },
+            { status: 403 }
+          );
+        }
+        updateData.defaultSubject = body.defaultSubject;
+        updateData.defaultBody = body.defaultBody;
+      }
+
+      const updated = await updateWorkspace(session.workspaceId, updateData);
 
       return NextResponse.json({
         success: true,
@@ -83,6 +103,9 @@ export async function PUT(request: NextRequest) {
       secondaryColor: body.secondaryColor,
       defaultSubject: body.defaultSubject,
       defaultBody: body.defaultBody,
+      ...(body.savedExcelMapping !== undefined
+        ? { permissions: { savedExcelMapping: body.savedExcelMapping } }
+        : {}),
       ...(body.passcode ? { passcode: body.passcode } : {}),
     });
 

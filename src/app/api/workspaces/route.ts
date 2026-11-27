@@ -53,6 +53,7 @@ export async function POST(request: NextRequest) {
       secondaryColor: body.secondaryColor,
       defaultSubject: body.defaultSubject,
       defaultBody: body.defaultBody,
+      permissions: body.permissions,
     });
 
     return NextResponse.json(

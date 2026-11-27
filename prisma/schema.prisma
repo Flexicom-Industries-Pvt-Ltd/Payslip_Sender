@@ -24,28 +24,41 @@ model Workspace {
   lightColor     String   @default("#F2F8EA")
   borderColor    String   @default("#D6EDBC")
   textColor      String   @default("#3F6E15")
-  defaultSubject String?
-  defaultBody    String?
-  isActive       Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  defaultSubject  String?
+  defaultBody     String?
+  permissionsJson String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  employees    Employee[]
-  dispatchLogs EmailDispatchLog[]
-  smtpConfig   SmtpConfig?
+  employees        Employee[]
+  dispatchLogs     EmailDispatchLog[]
+  smtpConfig       SmtpConfig?
+  payslipTemplates PayslipTemplate[]
+  payrollRuns      PayrollRun[]
 
   @@index([slug])
 }
 
 model Employee {
-  id          String   @id @default(cuid())
-  workspaceId String   @default("ws_sterling")
-  employeeId  String
-  name        String
-  email       String
-  department  String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                  String   @id @default(cuid())
+  workspaceId         String   @default("ws_sterling")
+  employeeId          String
+  name                String
+  email               String
+  department          String?
+  designation         String?
+  location            String?
+  dateOfJoining       String?
+  pan                 String?
+  uan                 String?
+  esicNo              String?
+  bankName            String?
+  bankAccount         String?
+  ifscCode            String?
+  salaryStructureJson String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
@@ -101,4 +114,42 @@ model SmtpConfig {
   updatedAt   DateTime @updatedAt
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model PayslipTemplate {
+  id          String   @id @default(cuid())
+  workspaceId String?
+  name        String
+  description String?
+  presetStyle String   @default("CLASSIC_CORPORATE")
+  configJson  String
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+}
+
+model PayrollRun {
+  id           String    @id @default(cuid())
+  workspaceId  String
+  month        String
+  year         String
+  templateId   String?
+  sourceMode   String    @default("MANUAL") // "EXCEL" | "MANUAL"
+  status       String    @default("DRAFT")  // "DRAFT" | "PENDING_APPROVAL" | "APPROVED" | "COMPLETED"
+  notes        String?
+  entriesJson  String
+  approvedBy   String?
+  approvedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([month, year])
+  @@index([status])
 }

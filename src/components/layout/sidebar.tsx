@@ -16,15 +16,22 @@ import {
   Check,
   Loader2,
   MonitorSmartphone,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { useSidebar } from './sidebar-context';
 import { useWorkspace } from './workspace-context';
+import { DEFAULT_WORKSPACE_PERMISSIONS } from '@/lib/workspace-permissions';
 
 const BASE_NAV_ITEMS = [
   {
     name: 'Employees',
     href: '/employees',
     icon: Users,
+  },
+  {
+    name: 'Payslip Generator',
+    href: '/generator',
+    icon: FileSpreadsheet,
   },
   {
     name: 'Payslip Distribution',
@@ -83,17 +90,35 @@ export function Sidebar() {
     setIsDesktopApp(checkIsElectron());
   }, []);
 
+  const perms = workspace.permissions || DEFAULT_WORKSPACE_PERMISSIONS;
+  const visibleBaseItems = BASE_NAV_ITEMS.filter((item) => {
+    if (role === 'SUPER_ADMIN') return true;
+    if (item.href === '/generator') {
+      return perms.allowExcelImport || perms.allowManualSalary || perms.allowTemplateDesigner;
+    }
+    if (item.href === '/payslips') {
+      return perms.allowDirectPdfUpload;
+    }
+    if (item.href === '/composer') {
+      return perms.allowEmailComposer;
+    }
+    if (item.href === '/settings') {
+      return perms.allowSmtpSettings;
+    }
+    return true;
+  });
+
   const navItems =
     role === 'SUPER_ADMIN'
       ? [
-          ...BASE_NAV_ITEMS,
+          ...visibleBaseItems,
           {
             name: 'Top Group Portal',
             href: '/admin/workspaces',
             icon: Building2,
           },
         ]
-      : BASE_NAV_ITEMS;
+      : visibleBaseItems;
 
   const initials = (workspace.name || 'CO')
     .split(/\s+/)

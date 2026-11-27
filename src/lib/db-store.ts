@@ -5,6 +5,20 @@ import { prisma } from './prisma';
 import { DEFAULT_WORKSPACE_ID } from './auth';
 import { deriveThemePalette, slugifyWorkspaceName } from './theme-utils';
 import { buildDefaultEmailBody, DEFAULT_EMAIL_SUBJECT } from './email-templates';
+import {
+  DEFAULT_WORKSPACE_PERMISSIONS,
+  parseWorkspacePermissions,
+  serializeWorkspacePermissions,
+  type WorkspacePermissions,
+} from './workspace-permissions';
+import {
+  buildDefaultMasterTemplates,
+  parsePayslipTemplateConfig,
+  type PayslipPresetStyle,
+  type PayslipTemplateConfig,
+  type PayslipTemplateRecord,
+} from './payslip-template-presets';
+import type { PayrollSlipEntry } from './payslip-calculator';
 
 export interface WorkspaceRecord {
   id: string;
@@ -24,6 +38,7 @@ export interface WorkspaceRecord {
   textColor: string;
   defaultSubject: string | null;
   defaultBody: string | null;
+  permissionsJson?: string | null;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -46,6 +61,7 @@ export interface WorkspacePublicBranding {
   textColor: string;
   defaultSubject: string | null;
   defaultBody: string | null;
+  permissions: WorkspacePermissions;
   isActive: boolean;
 }
 
@@ -56,6 +72,16 @@ export interface EmployeeRecord {
   name: string;
   email: string;
   department: string | null;
+  designation?: string | null;
+  location?: string | null;
+  dateOfJoining?: string | null;
+  pan?: string | null;
+  uan?: string | null;
+  esicNo?: string | null;
+  bankName?: string | null;
+  bankAccount?: string | null;
+  ifscCode?: string | null;
+  salaryStructureJson?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -296,6 +322,7 @@ export function toPublicWorkspaceBranding(w: WorkspaceRecord): WorkspacePublicBr
     textColor: w.textColor,
     defaultSubject: w.defaultSubject,
     defaultBody: w.defaultBody,
+    permissions: parseWorkspacePermissions(w.permissionsJson),
     isActive: w.isActive,
   };
 }
@@ -460,6 +487,7 @@ export async function createWorkspace(data: {
   secondaryColor?: string;
   defaultSubject?: string | null;
   defaultBody?: string | null;
+  permissions?: Partial<WorkspacePermissions>;
 }): Promise<WorkspaceRecord> {
   const name = data.name.trim();
   if (!name) throw new Error('Company name is required.');
@@ -477,6 +505,9 @@ export async function createWorkspace(data: {
   const secondaryColor = (data.secondaryColor || '#221E1E').trim().toUpperCase();
   const defaultSubject = data.defaultSubject?.trim() || DEFAULT_EMAIL_SUBJECT;
   const defaultBody = data.defaultBody?.trim() || buildDefaultEmailBody(legalName);
+  const permissionsJson = serializeWorkspacePermissions(
+    data.permissions || DEFAULT_WORKSPACE_PERMISSIONS
+  );
   const logoUrl = validateCompactImageField(data.logoUrl, 'Company Logo');
   const iconUrl = validateCompactImageField(data.iconUrl, 'Collapsed Icon') || logoUrl;
   const heroImageUrl = validateCompactImageField(data.heroImageUrl, 'Hero Image');
@@ -502,6 +533,7 @@ export async function createWorkspace(data: {
           textColor: palette.textColor,
           defaultSubject,
           defaultBody,
+          permissionsJson,
           isActive: true,
         },
       });
@@ -537,6 +569,7 @@ export async function createWorkspace(data: {
     textColor: palette.textColor,
     defaultSubject,
     defaultBody,
+    permissionsJson,
     isActive: true,
     createdAt: now,
     updatedAt: now,
@@ -561,6 +594,7 @@ export async function updateWorkspace(
     secondaryColor?: string;
     defaultSubject?: string | null;
     defaultBody?: string | null;
+    permissions?: Partial<WorkspacePermissions>;
     isActive?: boolean;
   }
 ): Promise<WorkspaceRecord> {
@@ -599,6 +633,13 @@ export async function updateWorkspace(
   }
   if (data.defaultSubject !== undefined) updatePayload.defaultSubject = data.defaultSubject || null;
   if (data.defaultBody !== undefined) updatePayload.defaultBody = data.defaultBody || null;
+  if (data.permissions !== undefined) {
+    const merged = {
+      ...parseWorkspacePermissions(existing.permissionsJson),
+      ...data.permissions,
+    };
+    updatePayload.permissionsJson = serializeWorkspacePermissions(merged);
+  }
   if (data.isActive !== undefined) updatePayload.isActive = Boolean(data.isActive);
 
   if (data.primaryColor) {
@@ -762,6 +803,16 @@ export async function createEmployee(
     name: string;
     email: string;
     department?: string | null;
+    designation?: string | null;
+    location?: string | null;
+    dateOfJoining?: string | null;
+    pan?: string | null;
+    uan?: string | null;
+    esicNo?: string | null;
+    bankName?: string | null;
+    bankAccount?: string | null;
+    ifscCode?: string | null;
+    salaryStructureJson?: string | null;
   },
   workspaceId: string = DEFAULT_WORKSPACE_ID
 ) {
@@ -769,6 +820,18 @@ export async function createEmployee(
   const name = data.name.trim();
   const email = data.email.trim().toLowerCase();
   const department = data.department?.trim() || null;
+  const extraFields = {
+    designation: data.designation?.trim() || null,
+    location: data.location?.trim() || null,
+    dateOfJoining: data.dateOfJoining?.trim() || null,
+    pan: data.pan?.trim().toUpperCase() || null,
+    uan: data.uan?.trim() || null,
+    esicNo: data.esicNo?.trim() || null,
+    bankName: data.bankName?.trim() || null,
+    bankAccount: data.bankAccount?.trim() || null,
+    ifscCode: data.ifscCode?.trim().toUpperCase() || null,
+    salaryStructureJson: data.salaryStructureJson || null,
+  };
 
   const isNeon = await isNeonPostgresActive();
   if (isNeon) {
@@ -780,6 +843,7 @@ export async function createEmployee(
           name,
           email,
           department,
+          ...extraFields,
         },
       });
     } catch (err: any) {
@@ -807,6 +871,7 @@ export async function createEmployee(
     name,
     email,
     department,
+    ...extraFields,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -823,6 +888,16 @@ export async function updateEmployee(
     name?: string;
     email?: string;
     department?: string | null;
+    designation?: string | null;
+    location?: string | null;
+    dateOfJoining?: string | null;
+    pan?: string | null;
+    uan?: string | null;
+    esicNo?: string | null;
+    bankName?: string | null;
+    bankAccount?: string | null;
+    ifscCode?: string | null;
+    salaryStructureJson?: string | null;
   },
   workspaceId: string = DEFAULT_WORKSPACE_ID
 ) {
@@ -839,6 +914,16 @@ export async function updateEmployee(
           ...(data.name ? { name: data.name.trim() } : {}),
           ...(data.email ? { email: data.email.trim().toLowerCase() } : {}),
           ...(data.department !== undefined ? { department: data.department?.trim() || null } : {}),
+          ...(data.designation !== undefined ? { designation: data.designation?.trim() || null } : {}),
+          ...(data.location !== undefined ? { location: data.location?.trim() || null } : {}),
+          ...(data.dateOfJoining !== undefined ? { dateOfJoining: data.dateOfJoining?.trim() || null } : {}),
+          ...(data.pan !== undefined ? { pan: data.pan?.trim().toUpperCase() || null } : {}),
+          ...(data.uan !== undefined ? { uan: data.uan?.trim() || null } : {}),
+          ...(data.esicNo !== undefined ? { esicNo: data.esicNo?.trim() || null } : {}),
+          ...(data.bankName !== undefined ? { bankName: data.bankName?.trim() || null } : {}),
+          ...(data.bankAccount !== undefined ? { bankAccount: data.bankAccount?.trim() || null } : {}),
+          ...(data.ifscCode !== undefined ? { ifscCode: data.ifscCode?.trim().toUpperCase() || null } : {}),
+          ...(data.salaryStructureJson !== undefined ? { salaryStructureJson: data.salaryStructureJson || null } : {}),
         },
       });
     } catch (err: any) {
@@ -872,6 +957,16 @@ export async function updateEmployee(
   if (data.name) list[index].name = data.name.trim();
   if (data.email) list[index].email = data.email.trim().toLowerCase();
   if (data.department !== undefined) list[index].department = data.department?.trim() || null;
+  if (data.designation !== undefined) list[index].designation = data.designation?.trim() || null;
+  if (data.location !== undefined) list[index].location = data.location?.trim() || null;
+  if (data.dateOfJoining !== undefined) list[index].dateOfJoining = data.dateOfJoining?.trim() || null;
+  if (data.pan !== undefined) list[index].pan = data.pan?.trim().toUpperCase() || null;
+  if (data.uan !== undefined) list[index].uan = data.uan?.trim() || null;
+  if (data.esicNo !== undefined) list[index].esicNo = data.esicNo?.trim() || null;
+  if (data.bankName !== undefined) list[index].bankName = data.bankName?.trim() || null;
+  if (data.bankAccount !== undefined) list[index].bankAccount = data.bankAccount?.trim() || null;
+  if (data.ifscCode !== undefined) list[index].ifscCode = data.ifscCode?.trim().toUpperCase() || null;
+  if (data.salaryStructureJson !== undefined) list[index].salaryStructureJson = data.salaryStructureJson || null;
   list[index].updatedAt = new Date();
 
   writeLocalEmployees(list);
@@ -1484,4 +1579,600 @@ export async function getEmployeesWithMonthlyStatus(options?: {
     month,
     year,
   };
+}
+
+// ----------------- Payslip Templates (Master & Company Scoped) -----------------
+
+export type PayrollRunStatus = 'DRAFT' | 'PENDING_APPROVAL' | 'APPROVED' | 'COMPLETED';
+
+export interface PayrollRunRecord {
+  id: string;
+  workspaceId: string;
+  month: string;
+  year: string;
+  templateId: string | null;
+  sourceMode: 'EXCEL' | 'MANUAL';
+  status: PayrollRunStatus;
+  notes: string | null;
+  entries: PayrollSlipEntry[];
+  approvedBy: string | null;
+  approvedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+function getLocalTemplatesFile(): string {
+  return path.join(ensureDataDir(), 'payslip-templates.json');
+}
+
+function getLocalPayrollRunsFile(): string {
+  return path.join(ensureDataDir(), 'payroll-runs.json');
+}
+
+function readLocalTemplates(): PayslipTemplateRecord[] {
+  try {
+    const file = getLocalTemplatesFile();
+    if (!fs.existsSync(file)) return [];
+    const parsed = JSON.parse(fs.readFileSync(file, 'utf-8'));
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map((t: any) => ({
+      ...t,
+      workspaceId: t.workspaceId || null,
+      presetStyle: (t.presetStyle || 'CLASSIC_CORPORATE') as PayslipPresetStyle,
+      config: parsePayslipTemplateConfig(t.config || t.configJson),
+      createdAt: new Date(t.createdAt),
+      updatedAt: new Date(t.updatedAt),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+function writeLocalTemplates(records: PayslipTemplateRecord[]) {
+  try {
+    fs.writeFileSync(getLocalTemplatesFile(), JSON.stringify(records, null, 2), 'utf-8');
+  } catch {
+    // ignore
+  }
+}
+
+function readLocalPayrollRuns(): PayrollRunRecord[] {
+  try {
+    const file = getLocalPayrollRunsFile();
+    if (!fs.existsSync(file)) return [];
+    const parsed = JSON.parse(fs.readFileSync(file, 'utf-8'));
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map((r: any) => ({
+      ...r,
+      entries: Array.isArray(r.entries) ? r.entries : [],
+      approvedAt: r.approvedAt ? new Date(r.approvedAt) : null,
+      createdAt: new Date(r.createdAt),
+      updatedAt: new Date(r.updatedAt),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+function writeLocalPayrollRuns(records: PayrollRunRecord[]) {
+  try {
+    fs.writeFileSync(getLocalPayrollRunsFile(), JSON.stringify(records, null, 2), 'utf-8');
+  } catch {
+    // ignore
+  }
+}
+
+function mapPrismaTemplate(row: any): PayslipTemplateRecord {
+  return {
+    id: row.id,
+    workspaceId: row.workspaceId || null,
+    name: row.name,
+    description: row.description || null,
+    presetStyle: (row.presetStyle || 'CLASSIC_CORPORATE') as PayslipPresetStyle,
+    config: parsePayslipTemplateConfig(row.configJson),
+    isDefault: Boolean(row.isDefault),
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+export async function ensureDefaultMasterTemplates(): Promise<PayslipTemplateRecord[]> {
+  const defaults = buildDefaultMasterTemplates();
+  const isNeon = await isNeonPostgresActive();
+
+  if (isNeon) {
+    try {
+      const existingCount = await prisma.payslipTemplate.count({
+        where: { workspaceId: null },
+      });
+      if (existingCount === 0) {
+        for (const tpl of defaults) {
+          await prisma.payslipTemplate.upsert({
+            where: { id: tpl.id },
+            update: {},
+            create: {
+              id: tpl.id,
+              workspaceId: null,
+              name: tpl.name,
+              description: tpl.description,
+              presetStyle: tpl.presetStyle,
+              configJson: JSON.stringify(tpl.config),
+              isDefault: tpl.isDefault,
+            },
+          });
+        }
+      }
+      const rows = await prisma.payslipTemplate.findMany({
+        where: { workspaceId: null },
+        orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
+      });
+      return rows.map(mapPrismaTemplate);
+    } catch {
+      // fallback
+    }
+  }
+
+  let list = readLocalTemplates();
+  if (!list.some((t) => t.workspaceId === null)) {
+    list = [...defaults, ...list];
+    writeLocalTemplates(list);
+  }
+  return list
+    .filter((t) => t.workspaceId === null)
+    .sort((a, b) => Number(b.isDefault) - Number(a.isDefault));
+}
+
+export async function getAllPayslipTemplatesForAdmin(): Promise<PayslipTemplateRecord[]> {
+  await ensureDefaultMasterTemplates();
+  const isNeon = await isNeonPostgresActive();
+
+  if (isNeon) {
+    try {
+      const rows = await prisma.payslipTemplate.findMany({
+        orderBy: [{ workspaceId: 'asc' }, { isDefault: 'desc' }, { createdAt: 'asc' }],
+      });
+      return rows.map(mapPrismaTemplate);
+    } catch {
+      // fallback
+    }
+  }
+
+  return readLocalTemplates().sort((a, b) => Number(b.isDefault) - Number(a.isDefault));
+}
+
+export async function getAccessibleTemplatesForWorkspace(
+  workspaceId: string
+): Promise<PayslipTemplateRecord[]> {
+  await ensureDefaultMasterTemplates();
+  const ws = await getWorkspaceById(workspaceId);
+  const perms = parseWorkspacePermissions(ws?.permissionsJson);
+
+  const isNeon = await isNeonPostgresActive();
+  let allTemplates: PayslipTemplateRecord[] = [];
+  if (isNeon) {
+    try {
+      const rows = await prisma.payslipTemplate.findMany({
+        where: {
+          OR: [{ workspaceId: null }, { workspaceId }],
+        },
+        orderBy: [{ workspaceId: 'desc' }, { isDefault: 'desc' }, { createdAt: 'asc' }],
+      });
+      allTemplates = rows.map(mapPrismaTemplate);
+    } catch {
+      allTemplates = readLocalTemplates();
+    }
+  } else {
+    allTemplates = readLocalTemplates();
+  }
+
+  const companyOwned = allTemplates.filter((t) => t.workspaceId === workspaceId);
+  const masters = allTemplates.filter((t) => t.workspaceId === null);
+
+  let allowedMasters: PayslipTemplateRecord[];
+  if (perms.allowAllMasterTemplates) {
+    allowedMasters = masters;
+  } else if (perms.assignedTemplateIds.length > 0) {
+    const allowedSet = new Set(perms.assignedTemplateIds);
+    allowedMasters = masters.filter((m) => allowedSet.has(m.id));
+  } else {
+    // At minimum keep the default master fallback if admin cleared everything without selecting one
+    allowedMasters = masters.slice(0, 1);
+  }
+
+  const result = [...companyOwned, ...allowedMasters];
+  return result.length > 0 ? result : buildDefaultMasterTemplates().slice(0, 1);
+}
+
+export async function getPayslipTemplateById(
+  id: string
+): Promise<PayslipTemplateRecord | null> {
+  await ensureDefaultMasterTemplates();
+  const isNeon = await isNeonPostgresActive();
+
+  if (isNeon) {
+    try {
+      const row = await prisma.payslipTemplate.findUnique({ where: { id } });
+      return row ? mapPrismaTemplate(row) : null;
+    } catch {
+      // fallback
+    }
+  }
+
+  return readLocalTemplates().find((t) => t.id === id) || null;
+}
+
+export async function createPayslipTemplate(data: {
+  workspaceId?: string | null;
+  name: string;
+  description?: string | null;
+  presetStyle?: PayslipPresetStyle;
+  config: Partial<PayslipTemplateConfig>;
+  isDefault?: boolean;
+}): Promise<PayslipTemplateRecord> {
+  await ensureDefaultMasterTemplates();
+  const cleanName = data.name.trim();
+  if (!cleanName) throw new Error('Template name is required.');
+
+  const config = parsePayslipTemplateConfig(data.config);
+  const presetStyle: PayslipPresetStyle = data.presetStyle || 'CLASSIC_CORPORATE';
+  const workspaceId = data.workspaceId || null;
+
+  const isNeon = await isNeonPostgresActive();
+  if (isNeon) {
+    const created = await prisma.payslipTemplate.create({
+      data: {
+        workspaceId,
+        name: cleanName,
+        description: data.description?.trim() || null,
+        presetStyle,
+        configJson: JSON.stringify(config),
+        isDefault: Boolean(data.isDefault),
+      },
+    });
+    return mapPrismaTemplate(created);
+  }
+
+  const now = new Date();
+  const record: PayslipTemplateRecord = {
+    id: `tpl_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    workspaceId,
+    name: cleanName,
+    description: data.description?.trim() || null,
+    presetStyle,
+    config,
+    isDefault: Boolean(data.isDefault),
+    createdAt: now,
+    updatedAt: now,
+  };
+  const list = readLocalTemplates();
+  list.push(record);
+  writeLocalTemplates(list);
+  return record;
+}
+
+export async function updatePayslipTemplate(
+  id: string,
+  data: {
+    name?: string;
+    description?: string | null;
+    presetStyle?: PayslipPresetStyle;
+    config?: Partial<PayslipTemplateConfig>;
+    isDefault?: boolean;
+  }
+): Promise<PayslipTemplateRecord> {
+  const existing = await getPayslipTemplateById(id);
+  if (!existing) throw new Error('Payslip template not found.');
+
+  const nextConfig = data.config
+    ? parsePayslipTemplateConfig({ ...existing.config, ...data.config })
+    : existing.config;
+
+  const isNeon = await isNeonPostgresActive();
+  if (isNeon) {
+    const updated = await prisma.payslipTemplate.update({
+      where: { id },
+      data: {
+        ...(data.name?.trim() ? { name: data.name.trim() } : {}),
+        ...(data.description !== undefined ? { description: data.description?.trim() || null } : {}),
+        ...(data.presetStyle ? { presetStyle: data.presetStyle } : {}),
+        ...(data.isDefault !== undefined ? { isDefault: Boolean(data.isDefault) } : {}),
+        configJson: JSON.stringify(nextConfig),
+      },
+    });
+    return mapPrismaTemplate(updated);
+  }
+
+  const list = readLocalTemplates();
+  const idx = list.findIndex((t) => t.id === id);
+  if (idx === -1) throw new Error('Payslip template not found.');
+  list[idx] = {
+    ...list[idx],
+    ...(data.name?.trim() ? { name: data.name.trim() } : {}),
+    ...(data.description !== undefined ? { description: data.description?.trim() || null } : {}),
+    ...(data.presetStyle ? { presetStyle: data.presetStyle } : {}),
+    ...(data.isDefault !== undefined ? { isDefault: Boolean(data.isDefault) } : {}),
+    config: nextConfig,
+    updatedAt: new Date(),
+  };
+  writeLocalTemplates(list);
+  return list[idx];
+}
+
+export async function deletePayslipTemplate(id: string) {
+  if (id === 'tpl_classic_corporate') {
+    throw new Error('Default Top Group Master Template cannot be deleted.');
+  }
+  const isNeon = await isNeonPostgresActive();
+  if (isNeon) {
+    return await prisma.payslipTemplate.delete({ where: { id } });
+  }
+  const list = readLocalTemplates();
+  const idx = list.findIndex((t) => t.id === id);
+  if (idx === -1) throw new Error('Template not found');
+  const [deleted] = list.splice(idx, 1);
+  writeLocalTemplates(list);
+  return deleted;
+}
+
+// ----------------- Payroll Runs & Maker-Checker Approvals -----------------
+
+function mapPrismaPayrollRun(row: any): PayrollRunRecord {
+  let entries: PayrollSlipEntry[] = [];
+  try {
+    const parsed = JSON.parse(row.entriesJson);
+    if (Array.isArray(parsed)) entries = parsed;
+  } catch {
+    entries = [];
+  }
+  return {
+    id: row.id,
+    workspaceId: row.workspaceId,
+    month: row.month,
+    year: row.year,
+    templateId: row.templateId || null,
+    sourceMode: row.sourceMode === 'EXCEL' ? 'EXCEL' : 'MANUAL',
+    status: (row.status || 'DRAFT') as PayrollRunStatus,
+    notes: row.notes || null,
+    entries,
+    approvedBy: row.approvedBy || null,
+    approvedAt: row.approvedAt || null,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+export async function getPayrollRuns(
+  workspaceId: string,
+  limit = 20
+): Promise<PayrollRunRecord[]> {
+  const isNeon = await isNeonPostgresActive();
+  if (isNeon) {
+    try {
+      const rows = await prisma.payrollRun.findMany({
+        where: { workspaceId },
+        orderBy: { updatedAt: 'desc' },
+        take: limit,
+      });
+      return rows.map(mapPrismaPayrollRun);
+    } catch {
+      // fallback
+    }
+  }
+  return readLocalPayrollRuns()
+    .filter((r) => r.workspaceId === workspaceId)
+    .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+    .slice(0, limit);
+}
+
+export async function getPayrollRunById(
+  id: string,
+  workspaceId?: string
+): Promise<PayrollRunRecord | null> {
+  const isNeon = await isNeonPostgresActive();
+  if (isNeon) {
+    try {
+      const row = await prisma.payrollRun.findFirst({
+        where: workspaceId ? { id, workspaceId } : { id },
+      });
+      return row ? mapPrismaPayrollRun(row) : null;
+    } catch {
+      // fallback
+    }
+  }
+  return (
+    readLocalPayrollRuns().find(
+      (r) => r.id === id && (!workspaceId || r.workspaceId === workspaceId)
+    ) || null
+  );
+}
+
+export async function getPendingApprovalsForAdmin(): Promise<
+  Array<PayrollRunRecord & { workspaceName: string }>
+> {
+  const isNeon = await isNeonPostgresActive();
+  if (isNeon) {
+    try {
+      const rows = await prisma.payrollRun.findMany({
+        where: { status: 'PENDING_APPROVAL' },
+        include: { workspace: { select: { name: true } } },
+        orderBy: { updatedAt: 'desc' },
+      });
+      return rows.map((r) => ({
+        ...mapPrismaPayrollRun(r),
+        workspaceName: r.workspace?.name || r.workspaceId,
+      }));
+    } catch {
+      // fallback
+    }
+  }
+  const workspaces = readLocalWorkspaces();
+  const wsMap = new Map(workspaces.map((w) => [w.id, w.name]));
+  return readLocalPayrollRuns()
+    .filter((r) => r.status === 'PENDING_APPROVAL')
+    .map((r) => ({
+      ...r,
+      workspaceName: wsMap.get(r.workspaceId) || r.workspaceId,
+    }));
+}
+
+export async function savePayrollRun(data: {
+  id?: string;
+  workspaceId: string;
+  month: string;
+  year: string;
+  templateId?: string | null;
+  sourceMode: 'EXCEL' | 'MANUAL';
+  status?: PayrollRunStatus;
+  notes?: string | null;
+  entries: PayrollSlipEntry[];
+}): Promise<PayrollRunRecord> {
+  const isNeon = await isNeonPostgresActive();
+  const entriesJson = JSON.stringify(data.entries || []);
+  const nextStatus: PayrollRunStatus = data.status || 'DRAFT';
+
+  if (isNeon) {
+    if (data.id) {
+      const existing = await prisma.payrollRun.findFirst({
+        where: { id: data.id, workspaceId: data.workspaceId },
+      });
+      if (existing) {
+        const updated = await prisma.payrollRun.update({
+          where: { id: data.id },
+          data: {
+            month: data.month,
+            year: data.year,
+            templateId: data.templateId ?? existing.templateId,
+            sourceMode: data.sourceMode,
+            status: nextStatus,
+            notes: data.notes ?? existing.notes,
+            entriesJson,
+            ...(nextStatus !== 'APPROVED' && nextStatus !== 'COMPLETED'
+              ? { approvedBy: null, approvedAt: null }
+              : {}),
+          },
+        });
+        return mapPrismaPayrollRun(updated);
+      }
+    }
+
+    const created = await prisma.payrollRun.create({
+      data: {
+        workspaceId: data.workspaceId,
+        month: data.month,
+        year: data.year,
+        templateId: data.templateId || null,
+        sourceMode: data.sourceMode,
+        status: nextStatus,
+        notes: data.notes || null,
+        entriesJson,
+      },
+    });
+    return mapPrismaPayrollRun(created);
+  }
+
+  const list = readLocalPayrollRuns();
+  const now = new Date();
+  if (data.id) {
+    const idx = list.findIndex(
+      (r) => r.id === data.id && r.workspaceId === data.workspaceId
+    );
+    if (idx !== -1) {
+      list[idx] = {
+        ...list[idx],
+        month: data.month,
+        year: data.year,
+        templateId: data.templateId ?? list[idx].templateId,
+        sourceMode: data.sourceMode,
+        status: nextStatus,
+        notes: data.notes ?? list[idx].notes,
+        entries: data.entries,
+        updatedAt: now,
+      };
+      writeLocalPayrollRuns(list);
+      return list[idx];
+    }
+  }
+
+  const record: PayrollRunRecord = {
+    id: `run_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    workspaceId: data.workspaceId,
+    month: data.month,
+    year: data.year,
+    templateId: data.templateId || null,
+    sourceMode: data.sourceMode,
+    status: nextStatus,
+    notes: data.notes || null,
+    entries: data.entries,
+    approvedBy: null,
+    approvedAt: null,
+    createdAt: now,
+    updatedAt: now,
+  };
+  list.unshift(record);
+  writeLocalPayrollRuns(list);
+  return record;
+}
+
+export async function approvePayrollRun(
+  id: string,
+  approvedBy = 'Top Group Admin'
+): Promise<PayrollRunRecord> {
+  const isNeon = await isNeonPostgresActive();
+  const now = new Date();
+  if (isNeon) {
+    const updated = await prisma.payrollRun.update({
+      where: { id },
+      data: {
+        status: 'APPROVED',
+        approvedBy,
+        approvedAt: now,
+      },
+    });
+    return mapPrismaPayrollRun(updated);
+  }
+
+  const list = readLocalPayrollRuns();
+  const idx = list.findIndex((r) => r.id === id);
+  if (idx === -1) throw new Error('Payroll run not found');
+  list[idx] = {
+    ...list[idx],
+    status: 'APPROVED',
+    approvedBy,
+    approvedAt: now,
+    updatedAt: now,
+  };
+  writeLocalPayrollRuns(list);
+  return list[idx];
+}
+
+export async function deletePayrollRun(id: string, workspaceId: string) {
+  const isNeon = await isNeonPostgresActive();
+  if (isNeon) {
+    const existing = await prisma.payrollRun.findFirst({ where: { id, workspaceId } });
+    if (!existing) throw new Error('Payroll run not found');
+    return await prisma.payrollRun.delete({ where: { id } });
+  }
+  const list = readLocalPayrollRuns();
+  const idx = list.findIndex((r) => r.id === id && r.workspaceId === workspaceId);
+  if (idx === -1) throw new Error('Payroll run not found');
+  const [deleted] = list.splice(idx, 1);
+  writeLocalPayrollRuns(list);
+  return deleted;
+}
+
+export async function getEffectiveWorkspacePermissions(
+  workspaceId: string
+): Promise<WorkspacePermissions> {
+  const ws = await getWorkspaceById(workspaceId);
+  return parseWorkspacePermissions(ws?.permissionsJson);
+}
+
+export async function checkWorkspacePermission(
+  workspaceId: string,
+  role: 'SUPER_ADMIN' | 'COMPANY_ADMIN',
+  key: keyof WorkspacePermissions
+): Promise<boolean> {
+  if (role === 'SUPER_ADMIN') return true;
+  const perms = await getEffectiveWorkspacePermissions(workspaceId);
+  return Boolean(perms[key]);
 }

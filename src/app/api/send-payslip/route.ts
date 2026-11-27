@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthSession } from '@/lib/auth';
-import { getWorkspaceById } from '@/lib/db-store';
+import {
+  getEffectiveWorkspacePermissions,
+  getEmailLogs,
+  getPayrollRunById,
+  getWorkspaceById,
+} from '@/lib/db-store';
 import { sendPayslipEmail, getSMTPConfigStatus } from '@/lib/mailer';
 
 export async function POST(request: NextRequest) {
@@ -34,6 +39,44 @@ export async function POST(request: NextRequest) {
     const year = formData.get('year') as string | null;
     const subject = formData.get('subject') as string | null;
     const body = formData.get('body') as string | null;
+    const payrollRunId = formData.get('payrollRunId') as string | null;
+
+    if (session.role !== 'SUPER_ADMIN') {
+      const perms = await getEffectiveWorkspacePermissions(session.workspaceId);
+
+      if (perms.requireMakerChecker && payrollRunId) {
+        const run = await getPayrollRunById(payrollRunId, session.workspaceId);
+        if (!run || (run.status !== 'APPROVED' && run.status !== 'COMPLETED')) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'Payroll run requires Top Group Admin approval before payslips can be emailed.',
+            },
+            { status: 403 }
+          );
+        }
+      }
+
+      if (!perms.allowResendSent && employeeId && month && year) {
+        const recentLogs = await getEmailLogs(500, session.workspaceId);
+        const alreadySent = recentLogs.some(
+          (l) =>
+            l.status === 'SUCCESS' &&
+            l.employeeId.toLowerCase() === employeeId.trim().toLowerCase() &&
+            l.month.toLowerCase() === month.trim().toLowerCase() &&
+            l.year.trim() === year.trim()
+        );
+        if (alreadySent) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: `Payslip for ${employeeId} (${month} ${year}) has already been sent and re-sending is locked by Top Group Admin.`,
+            },
+            { status: 403 }
+          );
+        }
+      }
+    }
 
     if (!file) {
       return NextResponse.json(

@@ -11,7 +11,22 @@ import {
   getWorkspaceBySlug,
   deleteWorkspace,
   getEnterpriseAuditLogs,
+  getAccessibleTemplatesForWorkspace,
+  createPayslipTemplate,
+  deletePayslipTemplate,
+  checkWorkspacePermission,
+  savePayrollRun,
+  approvePayrollRun,
+  getPayrollRunById,
 } from '../src/lib/db-store';
+import {
+  computePayslipTotals,
+  evaluatePayrollFormula,
+  numberToIndianWords,
+  resolveEmployeePdfPassword,
+} from '../src/lib/payslip-calculator';
+import { generateFormattedPayslipPdf } from '../src/lib/payslip-pdf-generator';
+import { DEFAULT_CONFIG_BASE } from '../src/lib/payslip-template-presets';
 import { deriveThemePalette, deriveSecondaryPalette, buildMonogramFaviconSvg } from '../src/lib/theme-utils';
 import { generateSolidRoundedPng } from '../src/lib/png-generator';
 import {
@@ -655,6 +670,156 @@ async function runTestSuite() {
     generatedPng.slice(0, 4).toString('hex') === '89504e47' && generatedPng.length > 100,
     'Programmatic 192x192 PNG generator produces valid PNG bytes for PWA Desktop App installability'
   );
+
+  // ----------------- TEST SUITE 9: PAYSLIP GENERATION, TEMPLATES & ADMIN PERMISSIONS -----------------
+  console.log('\n🧾 Suite 9: Payslip Generation, Formulas, Templates & Admin Permissions');
+
+  // 1. Verify zero-eval formula engine & Indian Rupee words
+  const formulaHra = evaluatePayrollFormula('ROUND(BASIC * 0.4)', { BASIC: 30000 });
+  const formulaPf = evaluatePayrollFormula('MIN(ROUND(BASIC * 0.12), 1800)', { BASIC: 30000 });
+  const formulaEsicZero = evaluatePayrollFormula('GROSS <= 21000 ? CEIL(GROSS * 0.0075) : 0', { GROSS: 45000 });
+  const formulaEsicHit = evaluatePayrollFormula('GROSS <= 21000 ? CEIL(GROSS * 0.0075) : 0', { GROSS: 18000 });
+  assert(
+    formulaHra === 12000 && formulaPf === 1800 && formulaEsicZero === 0 && formulaEsicHit === 135,
+    'Safe payroll formula engine evaluates HRA, capped PF, and conditional ESIC accurately'
+  );
+
+  assert(
+    numberToIndianWords(48500, 'INR') === 'Rupees Forty Eight Thousand Five Hundred Only',
+    'Indian Rupee number-to-words formatter converts amounts cleanly'
+  );
+
+  // 2. Verify Admin-restricted permissions & template filtering per workspace
+  const restrictedSlug = `restricted-unit-${Date.now()}`;
+  const restrictedWs = await createWorkspace({
+    name: 'Top Group Restricted Plant',
+    slug: restrictedSlug,
+    passcode: 'unit8888',
+    primaryColor: '#DC2626',
+    secondaryColor: '#0F172A',
+    permissions: {
+      allowExcelImport: false,
+      allowManualSalary: true,
+      allowDirectPdfUpload: false,
+      allowTemplateDesigner: false,
+      allowAllMasterTemplates: false,
+      assignedTemplateIds: ['tpl_compact_factory'],
+      allowEmployeeCrud: false,
+      allowEmailComposer: false,
+      allowSmtpSettings: false,
+      allowResendSent: false,
+      allowBulkDownload: false,
+      requirePdfPassword: true,
+      pdfPasswordRule: 'PAN_OR_EMP_ID',
+      requireMakerChecker: true,
+      allowFormulaAutoCalc: true,
+    },
+  });
+
+  const empCrudPermForHr = await checkWorkspacePermission(
+    restrictedWs.id,
+    'COMPANY_ADMIN',
+    'allowEmployeeCrud'
+  );
+  const empCrudPermForSuperAdmin = await checkWorkspacePermission(
+    restrictedWs.id,
+    'SUPER_ADMIN',
+    'allowEmployeeCrud'
+  );
+  assert(
+    empCrudPermForHr === false && empCrudPermForSuperAdmin === true,
+    'Permissions block restricted Company HR mutations while allowing Top Group Super Admin override'
+  );
+
+  const accessibleTemplates = await getAccessibleTemplatesForWorkspace(restrictedWs.id);
+  assert(
+    accessibleTemplates.length === 1 && accessibleTemplates[0].id === 'tpl_compact_factory',
+    'Admin-assigned template filter exposes only permitted template (tpl_compact_factory)'
+  );
+
+  // 3. Verify Maker-Checker Payroll Run & Approval flow
+  const slipTotals = computePayslipTotals(
+    {
+      employeeId: 'PLT001',
+      name: 'Rajesh Sharma',
+      email: 'rajesh@topgroup.in',
+      pan: 'ABCDE1234F',
+      totalDays: 30,
+      paidDays: 30,
+      lopDays: 0,
+      earnings: { basic: 15000, da: 2000, overtime: 1000, attendanceBonus: 500 },
+      deductions: { canteen: 300, advance: 0 },
+    },
+    accessibleTemplates[0].config,
+    true
+  );
+  assert(
+    slipTotals.grossEarnings > 0 && slipTotals.netPay < slipTotals.grossEarnings,
+    'Compute payslip gross, formula deductions (PF/ESIC), and net payable accurately'
+  );
+
+  const pendingRun = await savePayrollRun({
+    workspaceId: restrictedWs.id,
+    month: 'October',
+    year: '2026',
+    templateId: 'tpl_compact_factory',
+    sourceMode: 'MANUAL',
+    status: 'PENDING_APPROVAL',
+    entries: [
+      {
+        employeeId: 'PLT001',
+        name: 'Rajesh Sharma',
+        email: 'rajesh@topgroup.in',
+        pan: 'ABCDE1234F',
+        totalDays: 30,
+        paidDays: 30,
+        lopDays: 0,
+        earnings: { basic: 15000, da: 2000, overtime: 1000, attendanceBonus: 500 },
+        deductions: { canteen: 300, advance: 0 },
+      },
+    ],
+  });
+  const approvedRun = await approvePayrollRun(pendingRun.id, 'Top Group Admin');
+  const fetchedApproved = await getPayrollRunById(pendingRun.id, restrictedWs.id);
+  assert(
+    approvedRun.status === 'APPROVED' && fetchedApproved?.status === 'APPROVED',
+    'Maker-Checker payroll run transitions cleanly from PENDING_APPROVAL to APPROVED'
+  );
+
+  // 4. Verify Password-Protected A4 PDF generation via pdfkit
+  const pdfPwd = resolveEmployeePdfPassword(
+    { employeeId: 'PLT001', pan: 'ABCDE1234F' },
+    'PAN_OR_EMP_ID'
+  );
+  assert(pdfPwd === 'ABCDE1234F', 'PDF password resolver derives PAN/EMP_ID cleanly');
+
+  const customTpl = await createPayslipTemplate({
+    workspaceId: restrictedWs.id,
+    name: 'Plant Test Format',
+    presetStyle: 'MODERN_EXECUTIVE',
+    config: DEFAULT_CONFIG_BASE,
+  });
+
+  const formattedPdfBuf = await generateFormattedPayslipPdf({
+    companyName: 'Top Group Restricted Plant',
+    legalName: 'Top Group Restricted Plant Pvt. Ltd.',
+    primaryColor: '#DC2626',
+    month: 'October',
+    year: '2026',
+    presetStyle: customTpl.presetStyle,
+    config: customTpl.config,
+    entry: pendingRun.entries[0],
+    allowFormulas: true,
+    passwordProtect: true,
+    passwordRule: 'PAN_OR_EMP_ID',
+  });
+  assert(
+    formattedPdfBuf.slice(0, 5).toString('ascii') === '%PDF-' && formattedPdfBuf.length > 1000,
+    'pdfkit A4 Payslip Generator produces valid password-protected PDF document'
+  );
+
+  await deletePayslipTemplate(customTpl.id);
+  await deleteWorkspace(restrictedWs.id);
 
   // Cleanup test workspace
   await deleteWorkspace(tenantWs.id);

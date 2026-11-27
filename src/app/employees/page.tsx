@@ -32,6 +32,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import Link from 'next/link';
+import { DEFAULT_WORKSPACE_PERMISSIONS } from '@/lib/workspace-permissions';
 
 interface MonthStatusRecord {
   id?: string;
@@ -65,7 +66,10 @@ interface Employee {
 }
 
 export default function EmployeesPage() {
-  const { workspace } = useWorkspace();
+  const { workspace, role } = useWorkspace();
+  const canEditEmployees =
+    role === 'SUPER_ADMIN' ||
+    (workspace.permissions || DEFAULT_WORKSPACE_PERMISSIONS).allowEmployeeCrud;
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -361,38 +365,46 @@ export default function EmployeesPage() {
             <span>Download Template (.xlsx)</span>
           </a>
 
-          <button
-            onClick={() => {
-              setImportFile(null);
-              setImportSummary(null);
-              setImportError('');
-              setIsImportModalOpen(true);
-            }}
-            className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
-          >
-            <Upload className="w-3.5 h-3.5 text-slate-500" />
-            <span>Import Excel / CSV</span>
-          </button>
+          {canEditEmployees ? (
+            <>
+              <button
+                onClick={() => {
+                  setImportFile(null);
+                  setImportSummary(null);
+                  setImportError('');
+                  setIsImportModalOpen(true);
+                }}
+                className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
+              >
+                <Upload className="w-3.5 h-3.5 text-slate-500" />
+                <span>Import Excel / CSV</span>
+              </button>
 
-          <a
-            href={`/api/employees/export?month=${encodeURIComponent(
-              selectedMonth
-            )}&year=${encodeURIComponent(selectedYear)}`}
-            download
-            className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shadow-2xs"
-            title="Export full employee directory with registration dates and monthly payslip status"
-          >
-            <Download className="w-3.5 h-3.5 text-slate-500" />
-            <span>Export Roster</span>
-          </a>
+              <a
+                href={`/api/employees/export?month=${encodeURIComponent(
+                  selectedMonth
+                )}&year=${encodeURIComponent(selectedYear)}`}
+                download
+                className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shadow-2xs"
+                title="Export full employee directory with registration dates and monthly payslip status"
+              >
+                <Download className="w-3.5 h-3.5 text-slate-500" />
+                <span>Export Roster</span>
+              </a>
 
-          <button
-            onClick={handleOpenAdd}
-            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-brand rounded-lg hover:bg-brand-hover transition-colors shadow-xs cursor-pointer"
-          >
-            <UserPlus className="w-3.5 h-3.5" />
-            <span>Add Employee</span>
-          </button>
+              <button
+                onClick={handleOpenAdd}
+                className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-brand rounded-lg hover:bg-brand-hover transition-colors shadow-xs cursor-pointer"
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                <span>Add Employee</span>
+              </button>
+            </>
+          ) : (
+            <span className="px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+              Directory Locked by Top Group Admin
+            </span>
+          )}
         </div>
       </div>
 
@@ -697,22 +709,26 @@ export default function EmployeesPage() {
                             >
                               <History className="w-3.5 h-3.5" />
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => handleOpenEdit(emp)}
-                              className="p-1.5 text-slate-500 hover:text-brand hover:bg-brand-light rounded-md transition-colors cursor-pointer"
-                              title="Edit Employee"
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleOpenDelete(emp)}
-                              className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors cursor-pointer"
-                              title="Delete Employee"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            {canEditEmployees && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenEdit(emp)}
+                                  className="p-1.5 text-slate-500 hover:text-brand hover:bg-brand-light rounded-md transition-colors cursor-pointer"
+                                  title="Edit Employee"
+                                >
+                                  <Edit2 className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenDelete(emp)}
+                                  className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors cursor-pointer"
+                                  title="Delete Employee"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </td>
                       </tr>

@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthSession } from '@/lib/auth';
-import { updateEmployee, deleteEmployee, getEmployeeById } from '@/lib/db-store';
+import {
+  checkWorkspacePermission,
+  updateEmployee,
+  deleteEmployee,
+  getEmployeeById,
+} from '@/lib/db-store';
 
 export async function GET(
   request: NextRequest,
@@ -10,6 +15,18 @@ export async function GET(
     const session = await getAuthSession();
     if (!session || !session.workspaceId) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const allowed = await checkWorkspacePermission(
+      session.workspaceId,
+      session.role,
+      'allowEmployeeCrud'
+    );
+    if (!allowed) {
+      return NextResponse.json(
+        { success: false, error: 'Employee directory modifications are locked by Top Group Admin.' },
+        { status: 403 }
+      );
     }
 
     const { id } = await params;
@@ -39,9 +56,36 @@ export async function PUT(
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
+    const allowed = await checkWorkspacePermission(
+      session.workspaceId,
+      session.role,
+      'allowEmployeeCrud'
+    );
+    if (!allowed) {
+      return NextResponse.json(
+        { success: false, error: 'Employee directory modifications are locked by Top Group Admin.' },
+        { status: 403 }
+      );
+    }
+
     const { id } = await params;
     const body = await request.json();
-    const { employeeId, name, email, department } = body;
+    const {
+      employeeId,
+      name,
+      email,
+      department,
+      designation,
+      location,
+      dateOfJoining,
+      pan,
+      uan,
+      esicNo,
+      bankName,
+      bankAccount,
+      ifscCode,
+      salaryStructureJson,
+    } = body;
 
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       return NextResponse.json(
@@ -57,6 +101,16 @@ export async function PUT(
         name,
         email,
         department,
+        designation,
+        location,
+        dateOfJoining,
+        pan,
+        uan,
+        esicNo,
+        bankName,
+        bankAccount,
+        ifscCode,
+        salaryStructureJson,
       },
       session.workspaceId
     );
@@ -78,6 +132,18 @@ export async function DELETE(
     const session = await getAuthSession();
     if (!session || !session.workspaceId) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const allowed = await checkWorkspacePermission(
+      session.workspaceId,
+      session.role,
+      'allowEmployeeCrud'
+    );
+    if (!allowed) {
+      return NextResponse.json(
+        { success: false, error: 'Employee directory modifications are locked by Top Group Admin.' },
+        { status: 403 }
+      );
     }
 
     const { id } = await params;

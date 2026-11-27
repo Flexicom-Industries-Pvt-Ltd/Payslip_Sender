@@ -6,6 +6,7 @@ import { useWorkspace } from '@/components/layout/workspace-context';
 import { Badge } from '@/components/ui/badge';
 import { compressLogoToTinyBase64 } from '@/lib/image-optimizer';
 import { ColorThemePicker } from '@/components/ui/color-theme-picker';
+import { DEFAULT_WORKSPACE_PERMISSIONS } from '@/lib/workspace-permissions';
 import {
   Mail,
   CheckCircle2,
@@ -39,6 +40,8 @@ export default function SettingsPage() {
   const { workspace, role, refreshWorkspace } = useWorkspace();
   const [activeTab, setActiveTab] = useState<'smtp' | 'branding'>('smtp');
   const isSuperAdmin = role === 'SUPER_ADMIN';
+  const isSmtpRestricted =
+    !isSuperAdmin && !(workspace.permissions || DEFAULT_WORKSPACE_PERMISSIONS).allowSmtpSettings;
 
   const [formData, setFormData] = useState<SMTPFormData>({
     host: '',
@@ -360,6 +363,17 @@ export default function SettingsPage() {
       </div>
 
       {activeTab === 'smtp' || !isSuperAdmin ? (
+        isSmtpRestricted ? (
+          <div className="max-w-2xl bg-white rounded-2xl border border-amber-200 p-8 shadow-xs text-center space-y-2">
+            <Lock className="w-8 h-8 text-amber-500 mx-auto" />
+            <h3 className="text-sm font-bold text-slate-900">
+              SMTP Settings Managed Centrally
+            </h3>
+            <p className="text-xs text-slate-500">
+              Outgoing mail server configuration for {workspace.name} is restricted by Top Group Admin.
+            </p>
+          </div>
+        ) : (
         <div className="max-w-4xl bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-8 shadow-xs space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-100">
             <div className="flex items-center gap-3">
@@ -740,6 +754,7 @@ export default function SettingsPage() {
             </div>
           </form>
         </div>
+        )
       ) : (
         <div className="max-w-4xl bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-8 shadow-xs space-y-6">
           <div className="flex items-center gap-3 pb-4 border-b border-slate-100">

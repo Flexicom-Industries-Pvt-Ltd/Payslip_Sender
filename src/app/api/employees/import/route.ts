@@ -1,13 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as XLSX from 'xlsx';
 import { getAuthSession } from '@/lib/auth';
-import { bulkUpsertEmployees } from '@/lib/db-store';
+import { bulkUpsertEmployees, checkWorkspacePermission } from '@/lib/db-store';
 
 export async function POST(request: NextRequest) {
   try {
     const session = await getAuthSession();
     if (!session || !session.workspaceId) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const allowed = await checkWorkspacePermission(
+      session.workspaceId,
+      session.role,
+      'allowEmployeeCrud'
+    );
+    if (!allowed) {
+      return NextResponse.json(
+        { success: false, error: 'Employee bulk import is locked by Top Group Admin.' },
+        { status: 403 }
+      );
     }
 
     const formData = await request.formData();
