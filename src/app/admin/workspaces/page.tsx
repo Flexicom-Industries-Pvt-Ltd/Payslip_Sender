@@ -1,11 +1,13 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { DashboardShell } from '@/components/layout/dashboard-shell';
-import { useWorkspace } from '@/components/layout/workspace-context';
+import {
+  applyFaviconToDocument,
+  applyWorkspaceCssTheme,
+  useWorkspace,
+} from '@/components/layout/workspace-context';
 import { Modal } from '@/components/ui/modal';
-import { slugifyWorkspaceName } from '@/lib/theme-utils';
+import { buildMonogramFaviconSvg, slugifyWorkspaceName } from '@/lib/theme-utils';
 import { compressLogoToTinyBase64 } from '@/lib/image-optimizer';
 import { ColorThemePicker } from '@/components/ui/color-theme-picker';
 import { buildDefaultEmailBody, DEFAULT_EMAIL_SUBJECT } from '@/lib/email-templates';
@@ -27,6 +29,7 @@ import {
   Shield,
   Eye,
   EyeOff,
+  LogOut,
 } from 'lucide-react';
 
 interface AdminWorkspaceItem {
@@ -84,12 +87,23 @@ const EMPTY_FORM: WorkspaceFormState = {
 };
 
 export default function AdminWorkspacesPage() {
-  const router = useRouter();
-  const { workspace: activeWorkspace, role, switchWorkspace, refreshWorkspace } = useWorkspace();
+  const { role, switchWorkspace, switching, refreshWorkspace } = useWorkspace();
 
   const [workspaces, setWorkspaces] = useState<AdminWorkspaceItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // Keep Platform Super Admin Console visually neutral (never tinted by any tenant workspace)
+  useEffect(() => {
+    applyWorkspaceCssTheme({ primaryColor: '#0F172A', secondaryColor: '#FFFFFF' });
+    document.title = 'Platform Super Admin | Company Workspaces';
+    applyFaviconToDocument(buildMonogramFaviconSvg('SA', '#0F172A'));
+  }, []);
+
+  const handleAdminSignOut = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.assign('/admin/login');
+  };
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -262,266 +276,284 @@ export default function AdminWorkspacesPage() {
 
   if (role && role !== 'SUPER_ADMIN') {
     return (
-      <DashboardShell>
-        <div className="bg-white rounded-2xl border border-rose-200 p-8 text-center max-w-lg mx-auto mt-12">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 font-sans">
+        <div className="bg-white rounded-2xl border border-rose-200 p-8 text-center max-w-lg w-full">
           <Shield className="w-8 h-8 text-rose-500 mx-auto mb-3" />
           <h2 className="text-base font-bold text-slate-900">Restricted Access</h2>
           <p className="text-xs text-slate-500 mt-1">
             Only the Platform Super Admin can create and manage multi-tenant company workspaces.
           </p>
         </div>
-      </DashboardShell>
+      </div>
     );
   }
 
   return (
-    <DashboardShell>
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <Building2 className="w-5 h-5 text-brand" />
-            <span>Company Workspaces (Multi-Tenant)</span>
-          </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Create isolated white-label workspaces with custom logos, color themes, SMTP, and HR passcodes for each company.
-          </p>
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+      {/* Clean Neutral Platform Super Admin Top Bar */}
+      <header className="h-16 bg-white border-b border-slate-200/80 px-6 lg:px-10 flex items-center justify-between shrink-0 sticky top-0 z-20">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-slate-900 text-white flex items-center justify-center shadow-xs">
+            <Shield className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="text-sm font-bold text-slate-900 tracking-tight">
+              Platform Super Admin Console
+            </div>
+            <div className="text-[11px] text-slate-500">
+              Multi-Tenant Company Workspace Manager
+            </div>
+          </div>
         </div>
 
         <button
           type="button"
-          onClick={openCreateModal}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer"
+          onClick={handleAdminSignOut}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 bg-white transition-colors cursor-pointer"
         >
-          <Plus className="w-4 h-4" />
-          <span>Create Company Workspace</span>
+          <LogOut className="w-3.5 h-3.5" />
+          <span>Sign Out</span>
         </button>
-      </div>
+      </header>
 
-      {error && (
-        <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
+      <main className="flex-1 px-6 lg:px-10 py-8">
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-slate-900" />
+                <span>Company Workspaces</span>
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Create isolated white-label workspaces with custom logos, color themes, SMTP, and HR passcodes. Click &quot;Open Portal&quot; on any company to manage its payroll workspace.
+              </p>
+            </div>
 
-      {/* Workspaces Grid */}
-      {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="h-56 bg-white rounded-2xl border border-slate-200/80 animate-pulse p-6"
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {workspaces.map((ws) => {
-            const isCurrent = ws.id === activeWorkspace.id;
-            const showCode = Boolean(revealedPasscodes[ws.id]);
-            const initials = ws.name
-              .split(/\s+/)
-              .map((w) => w[0])
-              .join('')
-              .slice(0, 2)
-              .toUpperCase();
+            <button
+              type="button"
+              onClick={openCreateModal}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Create Company Workspace</span>
+            </button>
+          </div>
 
-            return (
-              <div
-                key={ws.id}
-                className={`bg-white rounded-2xl border transition-all shadow-xs overflow-hidden flex flex-col ${
-                  isCurrent ? 'border-slate-900 ring-1 ring-slate-900/10' : 'border-slate-200/80'
-                }`}
-              >
-                {/* Top Dual Color Strip */}
-                <div className="flex h-1.5 w-full">
-                  <div className="w-1/3 h-full" style={{ backgroundColor: ws.secondaryColor || '#221E1E' }} />
-                  <div className="w-2/3 h-full" style={{ backgroundColor: ws.primaryColor }} />
-                </div>
+          {error && (
+            <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
 
-                <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
-                  {/* Top Row: Logo + Name */}
-                  <div>
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-12 h-12 rounded-xl border border-slate-200 bg-slate-50 p-1.5 flex items-center justify-center shrink-0 overflow-hidden">
-                          {ws.logoUrl || ws.iconUrl ? (
-                            <img
-                              src={ws.iconUrl || ws.logoUrl || ''}
-                              alt={ws.name}
-                              className="w-full h-full object-contain"
-                            />
-                          ) : (
-                            <div
-                              className="w-full h-full rounded-lg text-white flex items-center justify-center font-bold text-sm"
-                              style={{ backgroundColor: ws.primaryColor }}
-                            >
-                              {initials}
+          {/* Workspaces Grid */}
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="h-56 bg-white rounded-2xl border border-slate-200/80 animate-pulse p-6"
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {workspaces.map((ws) => {
+                const showCode = Boolean(revealedPasscodes[ws.id]);
+                const initials = ws.name
+                  .split(/\s+/)
+                  .map((w) => w[0])
+                  .join('')
+                  .slice(0, 2)
+                  .toUpperCase();
+
+                return (
+                  <div
+                    key={ws.id}
+                    className="bg-white rounded-2xl border border-slate-200/90 hover:border-slate-300 transition-all shadow-xs overflow-hidden flex flex-col"
+                  >
+                    {/* Top Dual Color Strip */}
+                    <div className="flex h-1.5 w-full">
+                      <div
+                        className="w-1/3 h-full"
+                        style={{ backgroundColor: ws.secondaryColor || '#221E1E' }}
+                      />
+                      <div className="w-2/3 h-full" style={{ backgroundColor: ws.primaryColor }} />
+                    </div>
+
+                    <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
+                      {/* Top Row: Logo + Name */}
+                      <div>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-12 h-12 rounded-xl border border-slate-200 bg-slate-50 p-1.5 flex items-center justify-center shrink-0 overflow-hidden">
+                              {ws.logoUrl || ws.iconUrl ? (
+                                <img
+                                  src={ws.iconUrl || ws.logoUrl || ''}
+                                  alt={ws.name}
+                                  className="w-full h-full object-contain"
+                                />
+                              ) : (
+                                <div
+                                  className="w-full h-full rounded-lg text-white flex items-center justify-center font-bold text-sm"
+                                  style={{ backgroundColor: ws.primaryColor }}
+                                >
+                                  {initials}
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <h3 className="text-sm font-bold text-slate-900 truncate">
-                              {ws.name}
-                            </h3>
-                            {isCurrent && (
-                              <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-slate-900 text-white shrink-0">
-                                Active
-                              </span>
-                            )}
+                            <div className="min-w-0">
+                              <h3 className="text-sm font-bold text-slate-900 truncate">
+                                {ws.name}
+                              </h3>
+                              <p className="text-[11px] text-slate-500 truncate">
+                                {ws.legalName || ws.name}
+                              </p>
+                              <p className="text-[10px] font-mono text-slate-400 mt-0.5 truncate">
+                                Code: {ws.slug}
+                              </p>
+                            </div>
                           </div>
-                          <p className="text-[11px] text-slate-500 truncate">
-                            {ws.legalName || ws.name}
-                          </p>
-                          <p className="text-[10px] font-mono text-slate-400 mt-0.5 truncate">
-                            Code: {ws.slug}
-                          </p>
-                        </div>
-                      </div>
 
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0 ${
-                          ws.isActive
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : 'bg-slate-100 text-slate-500 border border-slate-200'
-                        }`}
-                      >
-                        {ws.isActive ? 'Active' : 'Paused'}
-                      </span>
-                    </div>
-
-                    {/* Metrics */}
-                    <div className="grid grid-cols-3 gap-2 mt-4 p-2.5 bg-slate-50/80 rounded-xl border border-slate-100 text-center">
-                      <div>
-                        <div className="text-xs font-bold text-slate-900 flex items-center justify-center gap-1">
-                          <Users className="w-3 h-3 text-slate-400" />
-                          <span>{ws.employeeCount}</span>
-                        </div>
-                        <div className="text-[10px] text-slate-500">Employees</div>
-                      </div>
-                      <div>
-                        <div className="text-xs font-bold text-slate-900 flex items-center justify-center gap-1">
-                          <Send className="w-3 h-3 text-slate-400" />
-                          <span>{ws.dispatchCount}</span>
-                        </div>
-                        <div className="text-[10px] text-slate-500">Logs</div>
-                      </div>
-                      <div>
-                        <div className="text-xs font-bold text-slate-900 flex items-center justify-center gap-1">
-                          <Mail className="w-3 h-3 text-slate-400" />
-                          <span>{ws.smtpConfigured ? 'Ready' : 'Setup'}</span>
-                        </div>
-                        <div className="text-[10px] text-slate-500">SMTP</div>
-                      </div>
-                    </div>
-
-                    {/* Passcode & Branded Login Link */}
-                    <div className="mt-3 space-y-2 text-[11px]">
-                      <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200/70">
-                        <span className="text-slate-500 flex items-center gap-1.5">
-                          <KeyRound className="w-3 h-3" />
-                          <span>HR Passcode:</span>
-                        </span>
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-mono font-semibold text-slate-800">
-                            {showCode ? ws.passcode : '••••••••'}
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0 ${
+                              ws.isActive
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : 'bg-slate-100 text-slate-500 border border-slate-200'
+                            }`}
+                          >
+                            {ws.isActive ? 'Active' : 'Paused'}
                           </span>
+                        </div>
+
+                        {/* Metrics */}
+                        <div className="grid grid-cols-3 gap-2 mt-4 p-2.5 bg-slate-50/80 rounded-xl border border-slate-100 text-center">
+                          <div>
+                            <div className="text-xs font-bold text-slate-900 flex items-center justify-center gap-1">
+                              <Users className="w-3 h-3 text-slate-400" />
+                              <span>{ws.employeeCount}</span>
+                            </div>
+                            <div className="text-[10px] text-slate-500">Employees</div>
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold text-slate-900 flex items-center justify-center gap-1">
+                              <Send className="w-3 h-3 text-slate-400" />
+                              <span>{ws.dispatchCount}</span>
+                            </div>
+                            <div className="text-[10px] text-slate-500">Logs</div>
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold text-slate-900 flex items-center justify-center gap-1">
+                              <Mail className="w-3 h-3 text-slate-400" />
+                              <span>{ws.smtpConfigured ? 'Ready' : 'Setup'}</span>
+                            </div>
+                            <div className="text-[10px] text-slate-500">SMTP</div>
+                          </div>
+                        </div>
+
+                        {/* Passcode & Branded Login Link */}
+                        <div className="mt-3 space-y-2 text-[11px]">
+                          <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200/70">
+                            <span className="text-slate-500 flex items-center gap-1.5">
+                              <KeyRound className="w-3 h-3" />
+                              <span>HR Passcode:</span>
+                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono font-semibold text-slate-800">
+                                {showCode ? ws.passcode : '••••••••'}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setRevealedPasscodes((prev) => ({
+                                    ...prev,
+                                    [ws.id]: !prev[ws.id],
+                                  }))
+                                }
+                                className="text-slate-400 hover:text-slate-700 cursor-pointer"
+                                title={showCode ? 'Hide passcode' : 'Show passcode'}
+                              >
+                                {showCode ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                              </button>
+                            </div>
+                          </div>
+
                           <button
                             type="button"
-                            onClick={() =>
-                              setRevealedPasscodes((prev) => ({
-                                ...prev,
-                                [ws.id]: !prev[ws.id],
-                              }))
-                            }
-                            className="text-slate-400 hover:text-slate-700 cursor-pointer"
-                            title={showCode ? 'Hide passcode' : 'Show passcode'}
+                            onClick={() => copyLoginUrl(ws.slug)}
+                            className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200/70 text-slate-600 transition-colors cursor-pointer"
                           >
-                            {showCode ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                            <span className="truncate font-mono text-[10px]">
+                              /login?workspace={ws.slug}
+                            </span>
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-700 shrink-0 ml-2">
+                              {copiedSlug === ws.slug ? (
+                                <>
+                                  <Check className="w-3 h-3 text-emerald-600" />
+                                  <span className="text-emerald-700">Copied</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="w-3 h-3" />
+                                  <span>Copy Link</span>
+                                </>
+                              )}
+                            </span>
                           </button>
                         </div>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => copyLoginUrl(ws.slug)}
-                        className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200/70 text-slate-600 transition-colors cursor-pointer"
-                      >
-                        <span className="truncate font-mono text-[10px]">
-                          /login?workspace={ws.slug}
-                        </span>
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-700 shrink-0 ml-2">
-                          {copiedSlug === ws.slug ? (
-                            <>
-                              <Check className="w-3 h-3 text-emerald-600" />
-                              <span className="text-emerald-700">Copied</span>
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="w-3 h-3" />
-                              <span>Copy Link</span>
-                            </>
-                          )}
-                        </span>
-                      </button>
+                      {/* Actions — Consistent "Open Portal" on every company card */}
+                      <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                        <button
+                          type="button"
+                          disabled={switching}
+                          onClick={() => switchWorkspace(ws.id)}
+                          className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90 cursor-pointer disabled:opacity-60"
+                          style={{ backgroundColor: ws.primaryColor }}
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          <span>Open Portal</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => openEditModal(ws)}
+                          className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors cursor-pointer"
+                          title="Edit Branding & Settings"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+
+                        {ws.id !== 'ws_sterling' && (
+                          <button
+                            type="button"
+                            disabled={deletingId === ws.id}
+                            onClick={() => {
+                              if (
+                                window.confirm(
+                                  `Delete workspace "${ws.name}" and all its employees and logs? This cannot be undone.`
+                                )
+                              ) {
+                                handleDelete(ws);
+                              }
+                            }}
+                            className="p-2 rounded-lg border border-slate-200 text-rose-500 hover:bg-rose-50 hover:border-rose-200 transition-colors cursor-pointer disabled:opacity-50"
+                            title="Delete Workspace"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
-
-                  {/* Actions */}
-                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        if (!isCurrent) {
-                          await switchWorkspace(ws.id);
-                        } else {
-                          router.push('/employees');
-                        }
-                      }}
-                      className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90 cursor-pointer"
-                      style={{ backgroundColor: ws.primaryColor }}
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      <span>{isCurrent ? 'Open Portal' : 'Enter Workspace'}</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => openEditModal(ws)}
-                      className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors cursor-pointer"
-                      title="Edit Branding & Settings"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                    </button>
-
-                    {ws.id !== 'ws_sterling' && (
-                      <button
-                        type="button"
-                        disabled={deletingId === ws.id}
-                        onClick={() => {
-                          if (
-                            window.confirm(
-                              `Delete workspace "${ws.name}" and all its employees and logs? This cannot be undone.`
-                            )
-                          ) {
-                            handleDelete(ws);
-                          }
-                        }}
-                        className="p-2 rounded-lg border border-slate-200 text-rose-500 hover:bg-rose-50 hover:border-rose-200 transition-colors cursor-pointer disabled:opacity-50"
-                        title="Delete Workspace"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+                );
+              })}
+            </div>
+          )}
         </div>
-      )}
+      </main>
 
       {/* Create / Edit Workspace Modal */}
       <Modal
@@ -727,6 +759,6 @@ export default function AdminWorkspacesPage() {
           </div>
         </form>
       </Modal>
-    </DashboardShell>
+    </div>
   );
 }

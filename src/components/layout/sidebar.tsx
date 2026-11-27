@@ -231,14 +231,17 @@ export function Sidebar() {
                   );
                 })}
                 <div className="border-t border-[var(--sidebar-border)] mt-1 pt-1 px-1.5">
-                  <Link
-                    href="/admin/workspaces"
-                    onClick={() => setShowSwitcher(false)}
-                    className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-[11px] font-semibold text-brand hover:bg-[var(--sidebar-hover)] transition-colors"
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowSwitcher(false);
+                      switchWorkspace(null);
+                    }}
+                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[11px] font-semibold text-brand hover:bg-[var(--sidebar-hover)] transition-colors cursor-pointer"
                   >
                     <Building2 className="w-3.5 h-3.5" />
-                    <span>Manage All Workspaces</span>
-                  </Link>
+                    <span>All Workspaces Console</span>
+                  </button>
                 </div>
               </div>
             )}
@@ -259,19 +262,39 @@ export function Sidebar() {
             {navItems.map((item) => {
               const isActive = pathname === item.href;
               const Icon = item.icon;
+              const className = `w-full flex items-center ${
+                isCollapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'
+              } rounded-lg text-sm font-medium transition-all ${
+                isActive
+                  ? 'bg-brand text-white shadow-xs font-semibold'
+                  : 'text-[var(--sidebar-text)] hover:text-[var(--sidebar-text-hover)] hover:bg-[var(--sidebar-hover)]'
+              }`;
+
+              if (item.href === '/admin/workspaces') {
+                return (
+                  <button
+                    key={item.href}
+                    type="button"
+                    onClick={() => switchWorkspace(null)}
+                    title={isCollapsed ? item.name : undefined}
+                    className={`${className} cursor-pointer text-left`}
+                  >
+                    <Icon
+                      className={`w-4 h-4 shrink-0 ${
+                        isActive ? 'text-white' : 'text-[var(--sidebar-muted)]'
+                      }`}
+                    />
+                    {!isCollapsed && <span className="truncate">{item.name}</span>}
+                  </button>
+                );
+              }
 
               return (
                 <Link
                   key={item.href}
                   href={item.href}
                   title={isCollapsed ? item.name : undefined}
-                  className={`flex items-center ${
-                    isCollapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'
-                  } rounded-lg text-sm font-medium transition-all ${
-                    isActive
-                      ? 'bg-brand text-white shadow-xs font-semibold'
-                      : 'text-[var(--sidebar-text)] hover:text-[var(--sidebar-text-hover)] hover:bg-[var(--sidebar-hover)]'
-                  }`}
+                  className={className}
                 >
                   <Icon
                     className={`w-4 h-4 shrink-0 ${

@@ -25,9 +25,11 @@ export async function ServerWorkspaceShell({
     const session = await getAuthSession();
     if (session) {
       initialRole = session.role;
-      const ws = await getWorkspaceById(session.workspaceId);
-      if (ws) {
-        initialWorkspace = toPublicWorkspaceBranding(ws);
+      if (session.workspaceId) {
+        const ws = await getWorkspaceById(session.workspaceId);
+        if (ws) {
+          initialWorkspace = toPublicWorkspaceBranding(ws);
+        }
       }
       if (session.role === 'SUPER_ADMIN') {
         const all = await getWorkspacesWithStats();

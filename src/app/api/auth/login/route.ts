@@ -1,9 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import {
-  DEFAULT_WORKSPACE_ID,
-  setAuthSession,
-  verifySuperAdminPasscode,
-} from '@/lib/auth';
+import { setAuthSession, verifySuperAdminPasscode } from '@/lib/auth';
 import {
   ensureDefaultWorkspace,
   getWorkspaceBySlug,
@@ -28,6 +24,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 1. Dedicated Super Admin sign-in (/admin/login only)
+    // Starts in clean Platform Admin mode (workspaceId: null) until a workspace is explicitly opened
     if (mode === 'super_admin') {
       if (!verifySuperAdminPasscode(trimmedPasscode)) {
         return NextResponse.json(
@@ -36,21 +33,20 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const defaultWs = await ensureDefaultWorkspace();
+      await ensureDefaultWorkspace();
       await setAuthSession({
         role: 'SUPER_ADMIN',
-        workspaceId: defaultWs.id || DEFAULT_WORKSPACE_ID,
+        workspaceId: null,
       });
 
       return NextResponse.json({
         success: true,
         role: 'SUPER_ADMIN',
-        workspace: toPublicWorkspaceBranding(defaultWs),
+        workspace: null,
       });
     }
 
     // 2. Company Workspace sign-in (/login or /login?workspace=<slug>)
-    // Strictly requires a valid workspace slug + that workspace's passcode and NEVER grants SUPER_ADMIN
     const cleanSlug = (workspaceSlug || '').trim().toLowerCase();
     if (!cleanSlug) {
       return NextResponse.json(

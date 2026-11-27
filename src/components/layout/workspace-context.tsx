@@ -55,7 +55,7 @@ interface WorkspaceContextValue {
   canOneClickInstall: boolean;
   triggerPwaInstall: () => Promise<'accepted' | 'dismissed' | 'unavailable'>;
   refreshWorkspace: () => Promise<void>;
-  switchWorkspace: (workspaceId: string) => Promise<void>;
+  switchWorkspace: (workspaceId: string | null) => Promise<void>;
 }
 
 const NEUTRAL_INITIAL_WORKSPACE: WorkspaceBranding = {
@@ -205,7 +205,7 @@ export function WorkspaceProvider({
       setRole(initialRole);
       setAvailableWorkspaces(initialAvailableWorkspaces);
       setLoading(false);
-      if (!pathname?.startsWith('/login') && !pathname?.startsWith('/admin/login')) {
+      if (!pathname?.startsWith('/login') && !pathname?.startsWith('/admin')) {
         applyBrandingToDocument(initialWorkspace);
       }
     }
@@ -272,13 +272,15 @@ export function WorkspaceProvider({
       const res = await fetch('/api/workspaces/current', { cache: 'no-store' });
       if (!res.ok) return;
       const data = await res.json();
-      if (data.success && data.workspace) {
-        setWorkspace(data.workspace);
+      if (data.success) {
+        if (data.workspace) setWorkspace(data.workspace);
         setRole(data.role || null);
         if (Array.isArray(data.availableWorkspaces)) {
           setAvailableWorkspaces(data.availableWorkspaces);
         }
-        applyBrandingToDocument(data.workspace);
+        if (data.workspace && !pathname?.startsWith('/admin')) {
+          applyBrandingToDocument(data.workspace);
+        }
       }
     } catch {
       // ignore
@@ -288,15 +290,14 @@ export function WorkspaceProvider({
   }, [pathname, applyBrandingToDocument]);
 
   useEffect(() => {
-    // Only fetch on mount if SSR didn't already populate this workspace, or when transitioning off login
     if (!initialWorkspace && !pathname?.startsWith('/login') && !pathname?.startsWith('/admin/login')) {
       refreshWorkspace();
     }
   }, [initialWorkspace, pathname, refreshWorkspace]);
 
   const switchWorkspace = useCallback(
-    async (workspaceId: string) => {
-      if (!workspaceId || workspaceId === workspace.id) return;
+    async (workspaceId: string | null) => {
+      if (workspaceId && workspaceId === workspace.id && !pathname?.startsWith('/admin')) return;
       try {
         setSwitching(true);
         const res = await fetch('/api/workspaces/switch', {
@@ -305,10 +306,14 @@ export function WorkspaceProvider({
           body: JSON.stringify({ workspaceId }),
         });
         const data = await res.json();
-        if (data.success && data.workspace) {
-          setWorkspace(data.workspace);
-          applyBrandingToDocument(data.workspace);
-          window.location.href = '/employees';
+        if (data.success) {
+          if (data.workspace) {
+            setWorkspace(data.workspace);
+            applyBrandingToDocument(data.workspace);
+            window.location.assign('/employees');
+          } else {
+            window.location.assign('/admin/workspaces');
+          }
         } else {
           setSwitching(false);
         }
@@ -316,7 +321,7 @@ export function WorkspaceProvider({
         setSwitching(false);
       }
     },
-    [workspace.id, applyBrandingToDocument]
+    [workspace.id, pathname, applyBrandingToDocument]
   );
 
   return (

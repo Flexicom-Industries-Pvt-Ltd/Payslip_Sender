@@ -41,6 +41,16 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/employees', request.url));
   }
 
+  // When Super Admin hasn't opened a specific company portal yet, redirect HR pages cleanly to Workspaces console
+  if (
+    session.role === 'SUPER_ADMIN' &&
+    !session.workspaceId &&
+    !pathname.startsWith('/admin') &&
+    !pathname.startsWith('/api/')
+  ) {
+    return NextResponse.redirect(new URL('/admin/workspaces', request.url));
+  }
+
   return NextResponse.next();
 }
 

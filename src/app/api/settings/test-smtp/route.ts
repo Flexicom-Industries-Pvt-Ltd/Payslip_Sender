@@ -5,7 +5,7 @@ import { verifySMTPConnection } from '@/lib/mailer';
 export async function POST(request: NextRequest) {
   try {
     const session = await getAuthSession();
-    if (!session) {
+    if (!session || !session.workspaceId) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 

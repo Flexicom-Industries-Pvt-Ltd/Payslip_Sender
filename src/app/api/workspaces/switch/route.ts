@@ -13,11 +13,17 @@ export async function POST(request: NextRequest) {
     }
 
     const { workspaceId } = await request.json();
+
+    // Allow clearing active workspace to return cleanly to Platform Super Admin Console
     if (!workspaceId) {
-      return NextResponse.json(
-        { success: false, error: 'workspaceId is required' },
-        { status: 400 }
-      );
+      await setAuthSession({
+        role: 'SUPER_ADMIN',
+        workspaceId: null,
+      });
+      return NextResponse.json({
+        success: true,
+        workspace: null,
+      });
     }
 
     const target = await getWorkspaceById(workspaceId);

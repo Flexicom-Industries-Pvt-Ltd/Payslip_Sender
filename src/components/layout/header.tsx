@@ -9,6 +9,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Shield,
+  ArrowLeft,
 } from 'lucide-react';
 import { useSidebar } from './sidebar-context';
 import { useWorkspace } from './workspace-context';
@@ -28,7 +29,7 @@ interface SystemStatus {
 export function Header() {
   const router = useRouter();
   const { isCollapsed, toggleSidebar } = useSidebar();
-  const { workspace, role } = useWorkspace();
+  const { workspace, role, switchWorkspace } = useWorkspace();
   const [status, setStatus] = useState<SystemStatus | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -85,10 +86,15 @@ export function Header() {
             {workspace.name} — Payslip Dispatch Portal
           </h1>
           {role === 'SUPER_ADMIN' && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-brand-light text-brand-text border border-brand-border">
-              <Shield className="w-2.5 h-2.5" />
-              <span>Super Admin</span>
-            </span>
+            <button
+              type="button"
+              onClick={() => switchWorkspace(null)}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-colors cursor-pointer"
+              title="Exit company portal and return to Platform Super Admin Console"
+            >
+              <ArrowLeft className="w-3 h-3" />
+              <span>All Workspaces</span>
+            </button>
           )}
         </div>
       </div>

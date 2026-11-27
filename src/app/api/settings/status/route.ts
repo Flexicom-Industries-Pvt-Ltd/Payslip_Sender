@@ -6,7 +6,7 @@ import { getDatabaseStatus } from '@/lib/db-store';
 export async function GET() {
   try {
     const session = await getAuthSession();
-    if (!session) {
+    if (!session || !session.workspaceId) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 

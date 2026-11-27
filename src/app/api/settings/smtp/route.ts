@@ -5,7 +5,7 @@ import { getSMTPConfigStatus, saveStoredSMTPConfig } from '@/lib/mailer';
 export async function GET() {
   try {
     const session = await getAuthSession();
-    if (!session) {
+    if (!session || !session.workspaceId) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -22,7 +22,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const session = await getAuthSession();
-    if (!session) {
+    if (!session || !session.workspaceId) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 

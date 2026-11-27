@@ -7,7 +7,7 @@ export type SessionRole = 'SUPER_ADMIN' | 'COMPANY_ADMIN';
 
 export interface AuthSession {
   role: SessionRole;
-  workspaceId: string;
+  workspaceId: string | null;
   exp: number;
 }
 
@@ -56,7 +56,9 @@ export async function signSessionToken(payload: AuthSession): Promise<string> {
   return `${data}.${toBase64Url(new Uint8Array(sig))}`;
 }
 
-export async function verifySessionToken(token: string | undefined | null): Promise<AuthSession | null> {
+export async function verifySessionToken(
+  token: string | undefined | null
+): Promise<AuthSession | null> {
   if (!token || !token.includes('.')) {
     return null;
   }
@@ -80,10 +82,15 @@ export async function verifySessionToken(token: string | undefined | null): Prom
 
     const decodedStr = new TextDecoder().decode(fromBase64Url(data));
     const parsed = JSON.parse(decodedStr) as AuthSession;
-    if (!parsed || !parsed.workspaceId || !parsed.role) return null;
+    if (!parsed || !parsed.role) return null;
+    if (parsed.role !== 'SUPER_ADMIN' && !parsed.workspaceId) return null;
     if (parsed.exp && Date.now() > parsed.exp) return null;
 
-    return parsed;
+    return {
+      role: parsed.role,
+      workspaceId: parsed.workspaceId || null,
+      exp: parsed.exp,
+    };
   } catch {
     return null;
   }
@@ -102,7 +109,7 @@ export async function isAuthenticated(): Promise<boolean> {
 
 export async function setAuthSession(params: {
   role: SessionRole;
-  workspaceId: string;
+  workspaceId: string | null;
 }) {
   const exp = Date.now() + 1000 * 60 * 60 * 24 * 7; // 7 days
   const token = await signSessionToken({

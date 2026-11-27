@@ -14,12 +14,12 @@ export async function GET() {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    const workspace = await getWorkspaceById(session.workspaceId);
-    if (!workspace) {
-      return NextResponse.json(
-        { success: false, error: 'Active workspace not found' },
-        { status: 404 }
-      );
+    let workspaceBranding = null;
+    if (session.workspaceId) {
+      const workspace = await getWorkspaceById(session.workspaceId);
+      if (workspace) {
+        workspaceBranding = toPublicWorkspaceBranding(workspace);
+      }
     }
 
     let availableWorkspaces = undefined;
@@ -40,7 +40,7 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       role: session.role,
-      workspace: toPublicWorkspaceBranding(workspace),
+      workspace: workspaceBranding,
       availableWorkspaces,
     });
   } catch (err: any) {
@@ -54,14 +54,12 @@ export async function GET() {
 export async function PUT(request: NextRequest) {
   try {
     const session = await getAuthSession();
-    if (!session) {
+    if (!session || !session.workspaceId) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
 
-    // Company admins may customize their workspace's email templates in Email Composer,
-    // while branding, colors, logos, and workspace passcodes remain controlled by Super Admin.
     if (session.role !== 'SUPER_ADMIN') {
       const updated = await updateWorkspace(session.workspaceId, {
         defaultSubject: body.defaultSubject,

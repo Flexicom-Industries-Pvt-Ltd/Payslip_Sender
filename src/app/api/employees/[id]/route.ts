@@ -8,7 +8,7 @@ export async function GET(
 ) {
   try {
     const session = await getAuthSession();
-    if (!session) {
+    if (!session || !session.workspaceId) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -35,7 +35,7 @@ export async function PUT(
 ) {
   try {
     const session = await getAuthSession();
-    if (!session) {
+    if (!session || !session.workspaceId) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -76,7 +76,7 @@ export async function DELETE(
 ) {
   try {
     const session = await getAuthSession();
-    if (!session) {
+    if (!session || !session.workspaceId) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 

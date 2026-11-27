@@ -7,7 +7,7 @@ import { MONTHS } from '@/lib/email-templates';
 export async function GET(request: NextRequest) {
   try {
     const session = await getAuthSession();
-    if (!session) {
+    if (!session || !session.workspaceId) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
