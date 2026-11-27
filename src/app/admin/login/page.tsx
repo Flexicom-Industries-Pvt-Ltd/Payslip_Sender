@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Lock, ArrowRight, AlertCircle, Eye, EyeOff, Loader2, Shield } from 'lucide-react';
+import { Lock, ArrowRight, AlertCircle, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { applyFaviconToDocument } from '@/components/layout/workspace-context';
 import { buildMonogramFaviconSvg } from '@/lib/theme-utils';
 
@@ -14,14 +14,14 @@ export default function SuperAdminLoginPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    document.title = 'Platform Super Admin | Payslip Portal';
-    applyFaviconToDocument(buildMonogramFaviconSvg('SA', '#0F172A'));
+    document.title = 'Top Group Admin Portal | Sign In';
+    applyFaviconToDocument(buildMonogramFaviconSvg('TG', '#0F172A'));
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!passcode.trim()) {
-      setError('Please enter the Super Admin passcode');
+      setError('Please enter the Top Group Admin passcode');
       return;
     }
 
@@ -40,7 +40,7 @@ export default function SuperAdminLoginPage() {
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        setError(data.error || 'Authentication failed. Verify Super Admin passcode.');
+        setError(data.error || 'Authentication failed. Verify Top Group Admin passcode.');
         setLoading(false);
         return;
       }
@@ -55,16 +55,18 @@ export default function SuperAdminLoginPage() {
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 font-sans select-none">
       <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200/90 shadow-sm p-8 sm:p-10 space-y-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center shadow-xs">
-            <Shield className="w-5 h-5" />
-          </div>
+        <div className="flex items-center gap-3.5">
+          <img
+            src="/top-group-logo.svg"
+            alt="Top Group Logo"
+            className="w-11 h-11 rounded-xl shadow-xs shrink-0"
+          />
           <div>
             <h1 className="text-lg font-bold text-slate-900 tracking-tight">
-              Platform Super Admin
+              Top Group Admin Portal
             </h1>
             <p className="text-xs text-slate-500">
-              Create &amp; manage white-label company workspaces
+              Create &amp; manage Top Group company workspaces
             </p>
           </div>
         </div>
@@ -79,14 +81,14 @@ export default function SuperAdminLoginPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-              Super Admin Passcode
+              Top Group Admin Passcode
             </label>
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
                 value={passcode}
                 onChange={(e) => setPasscode(e.target.value)}
-                placeholder="Enter platform admin passcode"
+                placeholder="Enter Top Group admin passcode"
                 className="w-full pl-10 pr-10 py-2.5 text-sm bg-slate-50/70 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-slate-900 focus:bg-white text-slate-900 placeholder:text-slate-400"
                 autoFocus
               />
@@ -115,7 +117,7 @@ export default function SuperAdminLoginPage() {
               </>
             ) : (
               <>
-                <span>Open Workspaces Console</span>
+                <span>Open Top Group Console</span>
                 <ArrowRight className="w-4 h-4" />
               </>
             )}
@@ -123,7 +125,7 @@ export default function SuperAdminLoginPage() {
         </form>
 
         <div className="pt-4 border-t border-slate-100 text-[11px] text-slate-400 text-center">
-          Restricted to Platform Owner • Multi-Tenant Administration
+          Top Group Corporate Administration • Multi-Tenant Payslip System
         </div>
       </div>
     </div>

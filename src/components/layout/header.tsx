@@ -90,10 +90,10 @@ export function Header() {
               type="button"
               onClick={() => switchWorkspace(null)}
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-colors cursor-pointer"
-              title="Exit company portal and return to Platform Super Admin Console"
+              title="Exit company portal and return to Top Group Admin Portal"
             >
               <ArrowLeft className="w-3 h-3" />
-              <span>All Workspaces</span>
+              <span>Top Group Portal</span>
             </button>
           )}
         </div>

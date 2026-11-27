@@ -7,14 +7,14 @@ export async function POST(request: NextRequest) {
     const session = await getAuthSession();
     if (!session || session.role !== 'SUPER_ADMIN') {
       return NextResponse.json(
-        { success: false, error: 'Only platform Super Admin can switch workspaces.' },
+        { success: false, error: 'Only Top Group Admin can switch workspaces.' },
         { status: 403 }
       );
     }
 
     const { workspaceId } = await request.json();
 
-    // Allow clearing active workspace to return cleanly to Platform Super Admin Console
+    // Allow clearing active workspace to return cleanly to Top Group Admin Portal
     if (!workspaceId) {
       await setAuthSession({
         role: 'SUPER_ADMIN',

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { DEFAULT_WORKSPACE_ID, getAuthSession, setAuthSession } from '@/lib/auth';
+import { getAuthSession, setAuthSession } from '@/lib/auth';
 import {
   deleteWorkspace,
   toPublicWorkspaceBranding,
@@ -14,7 +14,7 @@ export async function PUT(
     const session = await getAuthSession();
     if (!session || session.role !== 'SUPER_ADMIN') {
       return NextResponse.json(
-        { success: false, error: 'Forbidden: Super Admin access required.' },
+        { success: false, error: 'Forbidden: Top Group Admin access required.' },
         { status: 403 }
       );
     }
@@ -60,7 +60,7 @@ export async function DELETE(
     const session = await getAuthSession();
     if (!session || session.role !== 'SUPER_ADMIN') {
       return NextResponse.json(
-        { success: false, error: 'Forbidden: Super Admin access required.' },
+        { success: false, error: 'Forbidden: Top Group Admin access required.' },
         { status: 403 }
       );
     }
@@ -71,7 +71,7 @@ export async function DELETE(
     if (session.workspaceId === id) {
       await setAuthSession({
         role: 'SUPER_ADMIN',
-        workspaceId: DEFAULT_WORKSPACE_ID,
+        workspaceId: null,
       });
     }
 

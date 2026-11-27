@@ -11,7 +11,7 @@ export async function GET() {
     const session = await getAuthSession();
     if (!session || session.role !== 'SUPER_ADMIN') {
       return NextResponse.json(
-        { success: false, error: 'Forbidden: Super Admin access required.' },
+        { success: false, error: 'Forbidden: Top Group Admin access required.' },
         { status: 403 }
       );
     }
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     const session = await getAuthSession();
     if (!session || session.role !== 'SUPER_ADMIN') {
       return NextResponse.json(
-        { success: false, error: 'Forbidden: Super Admin access required.' },
+        { success: false, error: 'Forbidden: Top Group Admin access required.' },
         { status: 403 }
       );
     }

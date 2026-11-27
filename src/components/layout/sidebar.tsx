@@ -88,7 +88,7 @@ export function Sidebar() {
       ? [
           ...BASE_NAV_ITEMS,
           {
-            name: 'Workspaces',
+            name: 'Top Group Portal',
             href: '/admin/workspaces',
             icon: Building2,
           },
@@ -175,7 +175,7 @@ export function Sidebar() {
           )}
         </div>
 
-        {/* Super Admin Workspace Switcher */}
+        {/* Top Group Admin Workspace Switcher */}
         {role === 'SUPER_ADMIN' && availableWorkspaces.length > 0 && !isCollapsed && (
           <div className="px-3 pt-3 relative">
             <button
@@ -240,7 +240,7 @@ export function Sidebar() {
                     className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[11px] font-semibold text-brand hover:bg-[var(--sidebar-hover)] transition-colors cursor-pointer"
                   >
                     <Building2 className="w-3.5 h-3.5" />
-                    <span>All Workspaces Console</span>
+                    <span>Top Group Admin Portal</span>
                   </button>
                 </div>
               </div>

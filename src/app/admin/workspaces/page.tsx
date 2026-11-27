@@ -93,11 +93,11 @@ export default function AdminWorkspacesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Keep Platform Super Admin Console visually neutral (never tinted by any tenant workspace)
+  // Keep Top Group Admin Portal visually neutral (never tinted by any tenant workspace)
   useEffect(() => {
     applyWorkspaceCssTheme({ primaryColor: '#0F172A', secondaryColor: '#FFFFFF' });
-    document.title = 'Platform Super Admin | Company Workspaces';
-    applyFaviconToDocument(buildMonogramFaviconSvg('SA', '#0F172A'));
+    document.title = 'Top Group Admin Portal | Company Workspaces';
+    applyFaviconToDocument(buildMonogramFaviconSvg('TG', '#0F172A'));
   }, []);
 
   const handleAdminSignOut = async () => {
@@ -281,7 +281,7 @@ export default function AdminWorkspacesPage() {
           <Shield className="w-8 h-8 text-rose-500 mx-auto mb-3" />
           <h2 className="text-base font-bold text-slate-900">Restricted Access</h2>
           <p className="text-xs text-slate-500 mt-1">
-            Only the Platform Super Admin can create and manage multi-tenant company workspaces.
+            Only Top Group Administrators can create and manage multi-tenant company workspaces.
           </p>
         </div>
       </div>
@@ -290,18 +290,20 @@ export default function AdminWorkspacesPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
-      {/* Clean Neutral Platform Super Admin Top Bar */}
+      {/* Clean Neutral Top Group Admin Top Bar */}
       <header className="h-16 bg-white border-b border-slate-200/80 px-6 lg:px-10 flex items-center justify-between shrink-0 sticky top-0 z-20">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-slate-900 text-white flex items-center justify-center shadow-xs">
-            <Shield className="w-4 h-4" />
-          </div>
+          <img
+            src="/top-group-logo.svg"
+            alt="Top Group Logo"
+            className="w-9 h-9 rounded-xl shadow-xs shrink-0"
+          />
           <div>
             <div className="text-sm font-bold text-slate-900 tracking-tight">
-              Platform Super Admin Console
+              Top Group Admin Portal
             </div>
             <div className="text-[11px] text-slate-500">
-              Multi-Tenant Company Workspace Manager
+              Group Company Workspace Manager
             </div>
           </div>
         </div>
@@ -323,10 +325,10 @@ export default function AdminWorkspacesPage() {
             <div>
               <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
                 <Building2 className="w-5 h-5 text-slate-900" />
-                <span>Company Workspaces</span>
+                <span>Top Group Company Workspaces</span>
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Create isolated white-label workspaces with custom logos, color themes, SMTP, and HR passcodes. Click &quot;Open Portal&quot; on any company to manage its payroll workspace.
+                Create and manage isolated company portals under Top Group with custom logos, color themes, SMTP, and HR passcodes. Click &quot;Open Portal&quot; on any company to open its workspace.
               </p>
             </div>
 
@@ -759,6 +761,11 @@ export default function AdminWorkspacesPage() {
           </div>
         </form>
       </Modal>
+
+      <footer className="h-10 border-t border-slate-200/80 bg-white px-6 lg:px-10 flex items-center justify-between text-[11px] text-slate-400">
+        <span>Top Group Admin Portal</span>
+        <span>© 2026 Top Group. All rights reserved.</span>
+      </footer>
     </div>
   );
 }

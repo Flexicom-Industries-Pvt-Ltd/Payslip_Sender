@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     if (mode === 'super_admin') {
       if (!verifySuperAdminPasscode(trimmedPasscode)) {
         return NextResponse.json(
-          { success: false, error: 'Invalid Platform Super Admin passcode.' },
+          { success: false, error: 'Invalid Top Group Admin passcode.' },
           { status: 401 }
         );
       }
