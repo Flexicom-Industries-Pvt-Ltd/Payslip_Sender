@@ -120,21 +120,37 @@ export function applyWorkspaceCssTheme(
 }
 
 /**
- * Replaces ALL existing favicon/icon links in <head> so static defaults never override the company's tab icon.
+ * Updates favicon/icon links in <head> in-place WITHOUT calling .remove() on React-managed metadata nodes,
+ * preventing React 19 head reconciliation crashes (removeChild of null) during SPA route transitions.
  */
 export function applyFaviconToDocument(iconHref: string) {
   if (typeof document === 'undefined' || !iconHref) return;
 
-  const existing = document.head.querySelectorAll(
-    "link[rel='icon'], link[rel='shortcut icon'], link[rel='apple-touch-icon']"
-  );
-  existing.forEach((node) => node.remove());
+  const isSvg = iconHref.startsWith('data:image/svg+xml') || iconHref.endsWith('.svg');
 
   for (const rel of ['icon', 'shortcut icon', 'apple-touch-icon']) {
-    const link = document.createElement('link');
-    link.rel = rel;
-    link.href = iconHref;
-    document.head.appendChild(link);
+    const existing = document.head.querySelectorAll(`link[rel='${rel}']`);
+    if (existing.length > 0) {
+      existing.forEach((node) => {
+        if (node.getAttribute('href') !== iconHref) {
+          node.setAttribute('href', iconHref);
+        }
+        if (isSvg) {
+          node.setAttribute('type', 'image/svg+xml');
+        } else {
+          node.removeAttribute('type');
+        }
+      });
+    } else {
+      const link = document.createElement('link');
+      link.rel = rel;
+      link.href = iconHref;
+      if (isSvg) {
+        link.type = 'image/svg+xml';
+      }
+      link.setAttribute('data-workspace-favicon', 'true');
+      document.head.appendChild(link);
+    }
   }
 }
 
