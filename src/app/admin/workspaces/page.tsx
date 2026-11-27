@@ -100,9 +100,18 @@ export default function AdminWorkspacesPage() {
     applyFaviconToDocument(buildMonogramFaviconSvg('TG', '#0F172A'));
   }, []);
 
+  const [signingOut, setSigningOut] = useState(false);
+
   const handleAdminSignOut = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    window.location.assign('/admin/login');
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      await fetch('/api/auth/logout', { method: 'POST', cache: 'no-store' });
+    } catch {
+      // Proceed cleanly to login even if logout request failed
+    } finally {
+      window.location.assign('/admin/login');
+    }
   };
 
   // Modal state
@@ -311,10 +320,11 @@ export default function AdminWorkspacesPage() {
         <button
           type="button"
           onClick={handleAdminSignOut}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 bg-white transition-colors cursor-pointer"
+          disabled={signingOut}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 bg-white transition-colors cursor-pointer disabled:opacity-60"
         >
           <LogOut className="w-3.5 h-3.5" />
-          <span>Sign Out</span>
+          <span>{signingOut ? 'Signing Out...' : 'Sign Out'}</span>
         </button>
       </header>
 

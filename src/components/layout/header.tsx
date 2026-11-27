@@ -1,14 +1,12 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import {
   Mail,
   LogOut,
   RefreshCw,
   PanelLeftClose,
   PanelLeftOpen,
-  Shield,
   ArrowLeft,
 } from 'lucide-react';
 import { useSidebar } from './sidebar-context';
@@ -27,11 +25,11 @@ interface SystemStatus {
 }
 
 export function Header() {
-  const router = useRouter();
   const { isCollapsed, toggleSidebar } = useSidebar();
   const { workspace, role, switchWorkspace } = useWorkspace();
   const [status, setStatus] = useState<SystemStatus | null>(null);
   const [loading, setLoading] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
   const fetchStatus = async () => {
     try {
@@ -53,16 +51,22 @@ export function Header() {
   }, [workspace.id]);
 
   const handleLogout = async () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    const targetUrl =
+      role === 'SUPER_ADMIN'
+        ? '/admin/login'
+        : workspace.slug
+        ? `/login?workspace=${encodeURIComponent(workspace.slug)}`
+        : '/login';
+
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
-      if (role === 'SUPER_ADMIN') {
-        router.push('/admin/login');
-      } else {
-        router.push(`/login?workspace=${encodeURIComponent(workspace.slug)}`);
-      }
-      router.refresh();
+      await fetch('/api/auth/logout', { method: 'POST', cache: 'no-store' });
     } catch {
-      router.push('/login');
+      // Continue redirect even if request failed
+    } finally {
+      // Full browser navigation clears stale RSC/theme state and loads the clean login portal
+      window.location.assign(targetUrl);
     }
   };
 
@@ -130,12 +134,14 @@ export function Header() {
         <div className="h-5 w-px bg-slate-200" />
 
         <button
+          type="button"
           onClick={handleLogout}
-          className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-rose-600 px-2.5 py-1.5 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
+          disabled={signingOut}
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-rose-600 px-2.5 py-1.5 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer disabled:opacity-60"
           title="Sign out of HR Portal"
         >
           <LogOut className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Sign Out</span>
+          <span className="hidden sm:inline">{signingOut ? 'Signing Out...' : 'Sign Out'}</span>
         </button>
       </div>
     </header>

@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import {
   Lock,
   ArrowRight,
@@ -31,7 +30,6 @@ export function LoginClient({
   initialSlug,
   initialBrandedWorkspace,
 }: LoginClientProps) {
-  const router = useRouter();
   const { canOneClickInstall, isInstalledApp, triggerPwaInstall } = useWorkspace();
 
   const [workspaceSlug, setWorkspaceSlug] = useState(initialSlug);
@@ -63,7 +61,7 @@ export function LoginClient({
 
     // If launched via installed Desktop App while already authenticated for this workspace, enter directly
     let cancelled = false;
-    fetch('/api/auth/logout')
+    fetch('/api/auth/logout', { cache: 'no-store' })
       .then((res) => res.json())
       .then((authData) => {
         if (
@@ -71,7 +69,7 @@ export function LoginClient({
           authData.authenticated &&
           authData.workspaceId === brandedWorkspace.id
         ) {
-          router.replace('/employees');
+          window.location.assign('/employees');
         }
       })
       .catch(() => {});
@@ -79,7 +77,7 @@ export function LoginClient({
     return () => {
       cancelled = true;
     };
-  }, [initialSlug, brandedWorkspace, router]);
+  }, [initialSlug, brandedWorkspace]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

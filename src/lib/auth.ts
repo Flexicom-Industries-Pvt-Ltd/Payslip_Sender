@@ -130,7 +130,14 @@ export async function setAuthSession(params: {
 
 export async function clearAuthSession() {
   const cookieStore = await cookies();
-  cookieStore.delete(COOKIE_NAME);
+  cookieStore.set(COOKIE_NAME, '', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 0,
+    expires: new Date(0),
+    path: '/',
+  });
 }
 
 export function verifySuperAdminPasscode(input: string): boolean {
