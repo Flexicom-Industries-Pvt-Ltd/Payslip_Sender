@@ -6,13 +6,14 @@ export interface OptimizedImageResult {
 }
 
 const TARGET_MAX_BYTES = {
-  logo: 8 * 1024, // 8 KB max target for full sidebar/login logo
-  icon: 3 * 1024, // 3 KB max target for collapsed emblem/favicon
+  logo: 8 * 1024, // <= 8 KB ultra-compact WebP for sidebar/login display
+  icon: 26 * 1024, // <= 26 KB for crisp 192x192 PNG required by Windows/Chrome PWA shortcuts
 };
 
 /**
- * Compresses an uploaded image aggressively into a tiny WebP (or low-quality JPEG fallback)
- * base64 data URI so Neon PostgreSQL storage stays minimal across thousands of tenants.
+ * Compresses uploaded images for minimal Neon DB usage:
+ * - 'logo': tiny WebP (<= 8 KB, max 180x56px) for sidebar/login display
+ * - 'icon': crisp 192x192 PNG so Chrome/Edge native PWA Desktop App install always renders sharply
  */
 export async function compressLogoToTinyBase64(
   file: File,
@@ -20,15 +21,14 @@ export async function compressLogoToTinyBase64(
 ): Promise<OptimizedImageResult> {
   const maxBytes = TARGET_MAX_BYTES[kind];
 
-  // Allow tiny SVGs as-is; oversized SVGs get rasterized below to save DB space
-  if (file.type === 'image/svg+xml' && file.size <= maxBytes) {
+  if (kind === 'logo' && file.type === 'image/svg+xml' && file.size <= maxBytes) {
     const rawSvg = await readFileAsDataUrl(file);
     if (rawSvg.length <= maxBytes * 1.4) {
       return {
         dataUrl: rawSvg,
         byteSize: rawSvg.length,
-        width: kind === 'icon' ? 48 : 180,
-        height: kind === 'icon' ? 48 : 56,
+        width: 180,
+        height: 56,
       };
     }
   }
@@ -36,10 +36,51 @@ export async function compressLogoToTinyBase64(
   const rawDataUrl = await readFileAsDataUrl(file);
   const img = await loadImage(rawDataUrl);
 
-  const initialMaxW = kind === 'icon' ? 48 : 180;
-  const initialMaxH = kind === 'icon' ? 48 : 56;
+  if (kind === 'icon') {
+    // Windows / Chrome PWA install requires a crisp >= 192x192 PNG icon
+    const sizes = [192, 144, 128];
+    let bestUrl = '';
+    let bestSize = 192;
 
-  // Try progressive quality and dimension steps until compact enough for Neon DB
+    for (const dim of sizes) {
+      const canvas = document.createElement('canvas');
+      canvas.width = dim;
+      canvas.height = dim;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        bestUrl = rawDataUrl;
+        break;
+      }
+
+      // Draw centered inside padded square preserving aspect ratio
+      const padding = Math.round(dim * 0.08);
+      const innerMax = dim - padding * 2;
+      const ratio = Math.min(innerMax / img.width, innerMax / img.height);
+      const drawW = Math.max(1, Math.round(img.width * ratio));
+      const drawH = Math.max(1, Math.round(img.height * ratio));
+      const offsetX = Math.round((dim - drawW) / 2);
+      const offsetY = Math.round((dim - drawH) / 2);
+
+      ctx.clearRect(0, 0, dim, dim);
+      ctx.drawImage(img, offsetX, offsetY, drawW, drawH);
+
+      const candidate = canvas.toDataURL('image/png');
+      bestUrl = candidate;
+      bestSize = dim;
+      if (candidate.length <= maxBytes) break;
+    }
+
+    return {
+      dataUrl: bestUrl,
+      byteSize: bestUrl.length,
+      width: bestSize,
+      height: bestSize,
+    };
+  }
+
+  // Sidebar/Login Logo: aggressive WebP compression
+  const initialMaxW = 180;
+  const initialMaxH = 56;
   const attempts: Array<{ scaleFactor: number; quality: number }> = [
     { scaleFactor: 1.0, quality: 0.42 },
     { scaleFactor: 1.0, quality: 0.28 },
@@ -73,7 +114,6 @@ export async function compressLogoToTinyBase64(
     ctx.drawImage(img, 0, 0, width, height);
 
     let candidate = canvas.toDataURL('image/webp', step.quality);
-    // Fallback to white-backed JPEG if browser doesn't support WebP encoding
     if (!candidate.startsWith('data:image/webp')) {
       ctx.fillStyle = '#FFFFFF';
       ctx.fillRect(0, 0, width, height);

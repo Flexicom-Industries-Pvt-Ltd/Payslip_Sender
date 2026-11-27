@@ -13,6 +13,7 @@ import {
   getEnterpriseAuditLogs,
 } from '../src/lib/db-store';
 import { deriveThemePalette, deriveSecondaryPalette, buildMonogramFaviconSvg } from '../src/lib/theme-utils';
+import { generateSolidRoundedPng } from '../src/lib/png-generator';
 import {
   saveStoredSMTPConfig,
   getSMTPConfigStatus,
@@ -639,7 +640,7 @@ async function runTestSuite() {
       name: 'Bloated Logo Co',
       slug: `bloated-${Date.now()}`,
       passcode: 'test1234',
-      logoUrl: 'data:image/png;base64,' + 'A'.repeat(30000),
+      logoUrl: 'data:image/png;base64,' + 'A'.repeat(45000),
     });
   } catch {
     rejectedLargeLogo = true;
@@ -647,6 +648,12 @@ async function runTestSuite() {
   assert(
     rejectedLargeLogo,
     'Workspace creation rejects bloated unoptimized logos exceeding compact DB quota'
+  );
+
+  const generatedPng = generateSolidRoundedPng(192, '#2563EB');
+  assert(
+    generatedPng.slice(0, 4).toString('hex') === '89504e47' && generatedPng.length > 100,
+    'Programmatic 192x192 PNG generator produces valid PNG bytes for PWA Desktop App installability'
   );
 
   // Cleanup test workspace

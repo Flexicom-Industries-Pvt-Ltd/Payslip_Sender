@@ -435,7 +435,7 @@ export async function getWorkspaceBySlug(slug: string): Promise<WorkspaceRecord 
   return list.find((w) => w.slug.toLowerCase() === clean) || null;
 }
 
-const MAX_LOGO_STRING_LENGTH = 24000;
+const MAX_LOGO_STRING_LENGTH = 40000;
 
 function validateCompactImageField(value: string | null | undefined, label: string): string | null {
   const trimmed = value?.trim() || null;

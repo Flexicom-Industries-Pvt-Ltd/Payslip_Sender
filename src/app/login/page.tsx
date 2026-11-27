@@ -15,14 +15,18 @@ import {
 import type { WorkspaceBranding } from '@/components/layout/workspace-context';
 import {
   applyFaviconToDocument,
+  applyManifestToDocument,
   applyWorkspaceCssTheme,
+  useWorkspace,
 } from '@/components/layout/workspace-context';
 import { buildMonogramFaviconSvg } from '@/lib/theme-utils';
+import { Download } from 'lucide-react';
 
 function LoginPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlSlug = searchParams.get('workspace') || searchParams.get('w') || '';
+  const { canOneClickInstall, isInstalledApp, triggerPwaInstall } = useWorkspace();
 
   const [loginMode, setLoginMode] = useState<'workspace' | 'super_admin'>('workspace');
   const [workspaceSlug, setWorkspaceSlug] = useState(urlSlug);
@@ -41,6 +45,7 @@ function LoginPageInner() {
       setLoadingBrand(false);
       document.title = 'Enterprise Payslip Portal | Sign In';
       applyFaviconToDocument(buildMonogramFaviconSvg('HR', '#0F172A'));
+      applyManifestToDocument(null);
       return;
     }
 
@@ -48,7 +53,7 @@ function LoginPageInner() {
     setLoadingBrand(true);
     fetch(`/api/workspaces/public?slug=${encodeURIComponent(urlSlug)}`)
       .then((res) => res.json())
-      .then((data) => {
+      .then(async (data) => {
         if (cancelled) return;
         if (data.success && data.workspace) {
           setBrandedWorkspace(data.workspace);
@@ -59,6 +64,18 @@ function LoginPageInner() {
             data.workspace.logoUrl ||
             buildMonogramFaviconSvg(data.workspace.name, data.workspace.primaryColor);
           applyFaviconToDocument(iconHref);
+          applyManifestToDocument(data.workspace.slug);
+
+          // If launching an installed desktop app while already signed in to this workspace, jump straight inside
+          try {
+            const authRes = await fetch('/api/auth/logout');
+            const authData = await authRes.json();
+            if (!cancelled && authData.authenticated && authData.workspaceId === data.workspace.id) {
+              router.replace('/employees');
+            }
+          } catch {
+            // ignore
+          }
         } else {
           setBrandedWorkspace(null);
         }
@@ -303,9 +320,21 @@ function LoginPageInner() {
             </button>
           </form>
 
-          <div className="mt-8 pt-6 border-t border-slate-100 flex items-center gap-2 text-[11px] text-slate-400">
-            <Shield className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-            <span>Confidential Internal Portal • Authorized Personnel Only</span>
+          <div className="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between gap-2 text-[11px] text-slate-400">
+            <div className="flex items-center gap-2">
+              <Shield className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <span>Confidential Internal Portal • Authorized Personnel Only</span>
+            </div>
+            {brandedWorkspace && !isInstalledApp && canOneClickInstall && (
+              <button
+                type="button"
+                onClick={() => triggerPwaInstall()}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold text-[10px] transition-colors cursor-pointer shrink-0"
+              >
+                <Download className="w-3 h-3" />
+                <span>Install App</span>
+              </button>
+            )}
           </div>
         </div>
 

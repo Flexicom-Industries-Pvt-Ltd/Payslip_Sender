@@ -1,11 +1,34 @@
-const { app, BrowserWindow, Menu, shell } = require('electron');
+const { app, BrowserWindow, Menu, shell, nativeImage } = require('electron');
 const path = require('path');
 
 let mainWindow = null;
 
+async function applyWindowFavicon(win, faviconUrl) {
+  if (!win || win.isDestroyed() || !faviconUrl) return;
+  try {
+    if (faviconUrl.startsWith('data:image/svg+xml')) {
+      // Windows nativeImage expects raster PNG/ICO; SVG icons are handled smoothly via /api/workspaces/icon
+      return;
+    }
+    if (faviconUrl.startsWith('data:image/')) {
+      const img = nativeImage.createFromDataURL(faviconUrl);
+      if (!img.isEmpty()) win.setIcon(img);
+      return;
+    }
+    if (faviconUrl.startsWith('http://') || faviconUrl.startsWith('https://')) {
+      const res = await fetch(faviconUrl);
+      if (!res.ok) return;
+      const buf = Buffer.from(await res.arrayBuffer());
+      const img = nativeImage.createFromBuffer(buf);
+      if (!img.isEmpty()) win.setIcon(img);
+    }
+  } catch {
+    // Keep existing icon gracefully if network conversion fails
+  }
+}
+
 function createWindow() {
   const isDev = process.env.NODE_ENV === 'development';
-  // Target URL: Hosted Vercel app or local dev server
   const startUrl =
     process.env.ELECTRON_START_URL ||
     (isDev ? 'http://localhost:3000' : 'https://payslip-send.vercel.app');
@@ -17,10 +40,10 @@ function createWindow() {
     height: 860,
     minWidth: 1024,
     minHeight: 700,
-    title: 'Sterling Distillers — Payslip Dispatch Portal',
+    title: 'Payslip Dispatch Portal',
     icon: iconPath,
-    autoHideMenuBar: true, // Completely strip default menu bar
-    backgroundColor: '#221E1E', // Sterling Distillers theme background
+    autoHideMenuBar: true,
+    backgroundColor: '#FFFFFF',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
@@ -30,15 +53,26 @@ function createWindow() {
     show: false,
   });
 
-  // Explicitly ensure the menu bar is invisible and removed
   mainWindow.setMenuBarVisibility(false);
   if (typeof mainWindow.removeMenu === 'function') {
     mainWindow.removeMenu();
   }
 
-  // Set custom userAgent so web app can easily detect the Electron container
   const baseUserAgent = mainWindow.webContents.getUserAgent();
-  mainWindow.webContents.setUserAgent(`${baseUserAgent} SterlingDesktopApp/1.0.0 Electron`);
+  mainWindow.webContents.setUserAgent(`${baseUserAgent} PayslipDesktopApp/1.0.0 Electron`);
+
+  // Dynamically sync window title & taskbar icon to the logged-in tenant company
+  mainWindow.webContents.on('page-title-updated', (_event, title) => {
+    if (mainWindow && !mainWindow.isDestroyed() && title) {
+      mainWindow.setTitle(title);
+    }
+  });
+
+  mainWindow.webContents.on('page-favicon-updated', (_event, favicons) => {
+    if (Array.isArray(favicons) && favicons.length > 0) {
+      applyWindowFavicon(mainWindow, favicons[0]);
+    }
+  });
 
   mainWindow.loadURL(startUrl);
 
@@ -46,7 +80,6 @@ function createWindow() {
     mainWindow.show();
   });
 
-  // Open external links (mail clients, external documentation) in the user's default browser
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith('https:') || url.startsWith('http:') || url.startsWith('mailto:')) {
       shell.openExternal(url);
@@ -60,7 +93,6 @@ function createWindow() {
   });
 }
 
-// Single instance lock (prevent opening multiple instances)
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
   app.quit();
@@ -73,7 +105,6 @@ if (!gotTheLock) {
   });
 
   app.whenReady().then(() => {
-    // Completely remove default application menu strip (File, Edit, View, Help)
     if (Menu && typeof Menu.setApplicationMenu === 'function') {
       Menu.setApplicationMenu(null);
     }

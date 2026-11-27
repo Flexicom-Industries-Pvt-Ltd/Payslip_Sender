@@ -671,7 +671,7 @@ export default function AdminWorkspacesPage() {
                 placeholder="Optional square emblem (defaults to logo)"
                 value={
                   form.iconUrl.startsWith('data:')
-                    ? `Optimized WebP (${(form.iconUrl.length / 1024).toFixed(1)} KB)`
+                    ? `Optimized ${form.iconUrl.includes('image/png') ? 'PNG' : 'Image'} (${(form.iconUrl.length / 1024).toFixed(1)} KB)`
                     : form.iconUrl
                 }
                 onChange={(e) => setForm({ ...form, iconUrl: e.target.value })}

@@ -15,6 +15,7 @@ import {
   ChevronDown,
   Check,
   Loader2,
+  MonitorSmartphone,
 } from 'lucide-react';
 import { useSidebar } from './sidebar-context';
 import { useWorkspace } from './workspace-context';
@@ -50,9 +51,20 @@ const BASE_NAV_ITEMS = [
 export function Sidebar() {
   const pathname = usePathname();
   const { isCollapsed } = useSidebar();
-  const { workspace, role, availableWorkspaces, switchWorkspace, switching } = useWorkspace();
+  const {
+    workspace,
+    role,
+    availableWorkspaces,
+    switchWorkspace,
+    switching,
+    isInstalledApp,
+    canOneClickInstall,
+    triggerPwaInstall,
+  } = useWorkspace();
   const [isDesktopApp, setIsDesktopApp] = useState(false);
   const [showInstallModal, setShowInstallModal] = useState(false);
+  const [installingPwa, setInstallingPwa] = useState(false);
+  const [installFeedback, setInstallFeedback] = useState('');
   const [showSwitcher, setShowSwitcher] = useState(false);
 
   useEffect(() => {
@@ -63,6 +75,7 @@ export function Sidebar() {
         Boolean((window as any).isElectron) ||
         Boolean((window as any).electronAPI?.isDesktop) ||
         ua.includes('SterlingDesktopApp') ||
+        ua.includes('PayslipDesktopApp') ||
         ua.toLowerCase().includes('electron')
       );
     };
@@ -91,6 +104,27 @@ export function Sidebar() {
 
   const collapsedImg = workspace.iconUrl || workspace.logoUrl;
   const expandedImg = workspace.logoUrl;
+  const hideInstallButton = isDesktopApp || isInstalledApp;
+
+  const handleOneClickInstall = async () => {
+    setInstallFeedback('');
+    if (canOneClickInstall) {
+      setInstallingPwa(true);
+      const outcome = await triggerPwaInstall();
+      setInstallingPwa(false);
+      if (outcome === 'accepted') {
+        setShowInstallModal(false);
+      } else if (outcome === 'dismissed') {
+        setInstallFeedback('Installation was cancelled. You can try again anytime.');
+      }
+    } else {
+      setInstallFeedback(
+        'Open your browser menu (⋮ or install icon in the address bar) and click "Install ' +
+          workspace.name +
+          '" to pin this desktop app.'
+      );
+    }
+  };
 
   return (
     <>
@@ -251,14 +285,17 @@ export function Sidebar() {
           </div>
         </div>
 
-        {/* Install Desktop App button at bottom of navbar - ONLY visible in web browser, NEVER in Electron */}
-        {!isDesktopApp && (
+        {/* Install Desktop App button - hidden when already running inside Electron or Standalone Desktop App */}
+        {!hideInstallButton && (
           <div className="p-3 border-t border-[var(--sidebar-border)]">
             {isCollapsed ? (
               <button
                 type="button"
-                onClick={() => setShowInstallModal(true)}
-                title="Install Desktop App"
+                onClick={() => {
+                  setInstallFeedback('');
+                  setShowInstallModal(true);
+                }}
+                title={`Install ${workspace.name} Desktop App`}
                 className="w-full flex items-center justify-center p-2.5 rounded-lg bg-brand hover:bg-brand-hover text-white shadow-xs transition-all cursor-pointer group"
               >
                 <Download className="w-4 h-4 transition-transform group-hover:translate-y-0.5" />
@@ -266,7 +303,10 @@ export function Sidebar() {
             ) : (
               <button
                 type="button"
-                onClick={() => setShowInstallModal(true)}
+                onClick={() => {
+                  setInstallFeedback('');
+                  setShowInstallModal(true);
+                }}
                 className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg bg-brand hover:bg-brand-hover text-white text-xs font-bold shadow-xs transition-all cursor-pointer group"
               >
                 <Download className="w-4 h-4 transition-transform group-hover:translate-y-0.5" />
@@ -277,7 +317,7 @@ export function Sidebar() {
         )}
       </aside>
 
-      {/* Install Desktop App Modal */}
+      {/* Branded Desktop App Install Modal */}
       {showInstallModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
@@ -307,36 +347,59 @@ export function Sidebar() {
                 </div>
                 <div>
                   <h3 className="text-base font-bold tracking-tight">
-                    {workspace.name} Desktop
+                    {workspace.name} Desktop App
                   </h3>
                   <p className="text-xs text-[var(--sidebar-muted)] mt-0.5">
-                    Windows 10/11 Native Application
+                    Standalone App with {workspace.name} Logo &amp; Direct URL
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="p-6 space-y-5">
+            <div className="p-6 space-y-4">
               <p className="text-xs text-slate-600 leading-relaxed">
-                Install the standalone desktop application for dedicated native access without
-                using a web browser.
+                Install <strong>{workspace.name}</strong> directly onto your Windows Desktop and Start Menu. It launches in its own clean window with your company logo, zero address bars, and direct sign-in to <span className="font-mono text-slate-800">/login?workspace={workspace.slug}</span>.
               </p>
 
+              {installFeedback && (
+                <div className="p-3 rounded-xl bg-brand-light border border-brand-border text-[11px] text-brand-text leading-relaxed font-medium">
+                  {installFeedback}
+                </div>
+              )}
+
               <div className="flex flex-col gap-2.5">
-                <a
-                  href="/api/download/desktop"
-                  download={`${workspace.name.replace(/\s+/g, '-')}-Payslip-Portal-Setup.exe`}
-                  onClick={() => setShowInstallModal(false)}
-                  className="w-full py-3 px-4 rounded-xl bg-brand hover:bg-brand-hover text-white text-sm font-bold flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
+                <button
+                  type="button"
+                  onClick={handleOneClickInstall}
+                  disabled={installingPwa}
+                  className="w-full py-3 px-4 rounded-xl bg-brand hover:bg-brand-hover text-white text-sm font-bold flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-60"
                 >
-                  <Download className="w-4 h-4" />
-                  <span>Download Desktop Installer (.exe)</span>
-                </a>
+                  <MonitorSmartphone className="w-4 h-4" />
+                  <span>
+                    {installingPwa
+                      ? 'Opening Installer...'
+                      : canOneClickInstall
+                      ? `Install ${workspace.name} App`
+                      : `Install ${workspace.name} (Desktop App)`}
+                  </span>
+                </button>
+
+                {workspace.slug === 'sterling-distillers' && (
+                  <a
+                    href="/api/download/desktop"
+                    download="Sterling-Distillers-Payslip-Portal-Setup-1.0.0.exe"
+                    onClick={() => setShowInstallModal(false)}
+                    className="w-full py-2 px-4 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Or download legacy Windows .exe installer</span>
+                  </a>
+                )}
 
                 <button
                   type="button"
                   onClick={() => setShowInstallModal(false)}
-                  className="w-full py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors cursor-pointer"
+                  className="w-full py-2 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors cursor-pointer"
                 >
                   Maybe Later
                 </button>

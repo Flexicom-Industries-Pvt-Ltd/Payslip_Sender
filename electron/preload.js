@@ -6,6 +6,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   isDesktop: true,
   platform: process.platform,
   version: '1.0.0',
-  appName: 'Sterling Distillers — Payslip Dispatch Portal',
+  appName: 'Payslip Dispatch Portal',
 });
-

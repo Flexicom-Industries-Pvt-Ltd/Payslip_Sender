@@ -40,12 +40,20 @@ export interface WorkspaceSummary {
   isActive: boolean;
 }
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
+}
+
 interface WorkspaceContextValue {
   workspace: WorkspaceBranding;
   role: 'SUPER_ADMIN' | 'COMPANY_ADMIN' | null;
   availableWorkspaces: WorkspaceSummary[];
   loading: boolean;
   switching: boolean;
+  isInstalledApp: boolean;
+  canOneClickInstall: boolean;
+  triggerPwaInstall: () => Promise<'accepted' | 'dismissed' | 'unavailable'>;
   refreshWorkspace: () => Promise<void>;
   switchWorkspace: (workspaceId: string) => Promise<void>;
 }
@@ -76,6 +84,9 @@ const WorkspaceContext = createContext<WorkspaceContextValue>({
   availableWorkspaces: [],
   loading: true,
   switching: false,
+  isInstalledApp: false,
+  canOneClickInstall: false,
+  triggerPwaInstall: async () => 'unavailable',
   refreshWorkspace: async () => {},
   switchWorkspace: async () => {},
 });
@@ -109,7 +120,7 @@ export function applyWorkspaceCssTheme(
 }
 
 /**
- * Replaces ALL existing favicon/icon links in <head> so static default icons never override the active company's tab icon.
+ * Replaces ALL existing favicon/icon links in <head> so static defaults never override the company's tab icon.
  */
 export function applyFaviconToDocument(iconHref: string) {
   if (typeof document === 'undefined' || !iconHref) return;
@@ -127,6 +138,28 @@ export function applyFaviconToDocument(iconHref: string) {
   }
 }
 
+/**
+ * Dynamically binds the active company's Web App Manifest so Chrome/Edge installs a dedicated Desktop App
+ * with that company's own name, logo, and login URL.
+ */
+export function applyManifestToDocument(workspaceSlug?: string | null) {
+  if (typeof document === 'undefined') return;
+
+  const manifestUrl = workspaceSlug
+    ? `/api/manifest?workspace=${encodeURIComponent(workspaceSlug)}`
+    : '/api/manifest';
+
+  let link: HTMLLinkElement | null = document.head.querySelector("link[rel='manifest']");
+  if (!link) {
+    link = document.createElement('link');
+    link.rel = 'manifest';
+    document.head.appendChild(link);
+  }
+  if (link.getAttribute('href') !== manifestUrl) {
+    link.href = manifestUrl;
+  }
+}
+
 export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [workspace, setWorkspace] = useState<WorkspaceBranding>(NEUTRAL_INITIAL_WORKSPACE);
@@ -135,6 +168,61 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [switching, setSwitching] = useState(false);
 
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [isInstalledApp, setIsInstalledApp] = useState(false);
+
+  // Register lightweight Service Worker + capture browser install prompt + standalone detection
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+
+    const checkStandalone = () => {
+      const standaloneMedia =
+        typeof window.matchMedia === 'function' &&
+        window.matchMedia('(display-mode: standalone)').matches;
+      const iosStandalone = Boolean((window.navigator as any).standalone);
+      setIsInstalledApp(standaloneMedia || iosStandalone);
+    };
+    checkStandalone();
+
+    const handleBeforeInstall = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
+    };
+
+    const handleAppInstalled = () => {
+      setDeferredPrompt(null);
+      setIsInstalledApp(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+    window.addEventListener('appinstalled', handleAppInstalled);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
+
+  const triggerPwaInstall = useCallback(async (): Promise<
+    'accepted' | 'dismissed' | 'unavailable'
+  > => {
+    if (!deferredPrompt) return 'unavailable';
+    try {
+      await deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setDeferredPrompt(null);
+        setIsInstalledApp(true);
+      }
+      return outcome;
+    } catch {
+      return 'unavailable';
+    }
+  }, [deferredPrompt]);
+
   const applyBrandingToDocument = useCallback((ws: WorkspaceBranding) => {
     applyWorkspaceCssTheme(ws);
     if (typeof document !== 'undefined') {
@@ -142,6 +230,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       const resolvedIcon =
         ws.iconUrl || ws.logoUrl || buildMonogramFaviconSvg(ws.name, ws.primaryColor);
       applyFaviconToDocument(resolvedIcon);
+      applyManifestToDocument(ws.slug);
     }
   }, []);
 
@@ -206,6 +295,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         availableWorkspaces,
         loading,
         switching,
+        isInstalledApp,
+        canOneClickInstall: Boolean(deferredPrompt),
+        triggerPwaInstall,
         refreshWorkspace,
         switchWorkspace,
       }}
